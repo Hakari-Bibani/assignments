@@ -1,70 +1,69 @@
 import streamlit as st
-from style import apply_custom_style
+import pandas as pd
+from pathlib import Path
 import importlib
 import sys
-import os
+from style import apply_style
+
+# Configure page settings
+st.set_page_config(
+    page_title="ImpactHub",
+    page_icon="📚",
+    layout="wide"
+)
 
 # Apply custom styling
-apply_custom_style()
+apply_style()
+
+# Create animated title
+st.markdown("""
+    <div class="animate-title">
+        <h1>ImpactHub</h1>
+    </div>
+""", unsafe_allow_html=True)
+
+def load_module(module_name):
+    try:
+        return importlib.import_module(module_name)
+    except ImportError:
+        st.error(f"Could not load module: {module_name}")
+        return None
 
 def main():
-    # Set page config
-    st.set_page_config(
-        page_title="ImpactHub",
-        layout="wide",
-        initial_sidebar_state="collapsed"
-    )
-
-    # Custom title with animation
-    st.markdown(
-        """
-        <div class="moving-title">
-            <h1>ImpactHub</h1>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # Create two columns for Assignments and Quizzes
+    # Create two columns for weeks and quizzes
     col1, col2 = st.columns(2)
-
+    
+    # Weeks column
     with col1:
-        st.header("Assignments")
+        st.markdown("### 📝 Weekly Assignments")
         for week in range(1, 16):
             with st.container():
                 st.markdown(f"""
                 <div class="card">
                     <h3>Week {week}</h3>
-                    <p>Assignment for Week {week}</p>
+                    <p>Assignment {week}</p>
                 </div>
                 """, unsafe_allow_html=True)
-                
                 if st.button(f"Start Week {week}", key=f"week_{week}"):
-                    try:
-                        # Dynamically import week module
-                        week_module = importlib.import_module(f"week{week}")
-                        week_module.run()
-                    except ImportError:
-                        st.error(f"Week {week} content not found.")
-
+                    module = load_module(f"week{week}")
+                    if module:
+                        module.run()
+    
+    # Quizzes column
     with col2:
-        st.header("Quizzes")
+        st.markdown("### 📊 Quizzes")
         for quiz in range(1, 11):
             with st.container():
                 st.markdown(f"""
                 <div class="card">
                     <h3>Quiz {quiz}</h3>
-                    <p>Quiz {quiz} Assessment</p>
+                    <p>Assessment {quiz}</p>
                 </div>
                 """, unsafe_allow_html=True)
-                
                 if st.button(f"Start Quiz {quiz}", key=f"quiz_{quiz}"):
-                    try:
-                        # Dynamically import quiz module
-                        quiz_module = importlib.import_module(f"quiz{quiz}")
-                        quiz_module.run()
-                    except ImportError:
-                        st.error(f"Quiz {quiz} content not found.")
+                    module = load_module(f"quiz{quiz}")
+                    if module:
+                        module.run()
 
 if __name__ == "__main__":
     main()
