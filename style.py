@@ -1,82 +1,58 @@
 import streamlit as st
 
-def apply_custom_styles():
-    # Custom CSS
+def custom_style():
     st.markdown("""
         <style>
-        /* Moving title animation */
-        @keyframes moveTitle {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        .moving-title {
-            overflow: hidden;
-            white-space: nowrap;
-            margin-bottom: 2rem;
-        }
-        
-        .moving-title h1 {
-            display: inline-block;
-            font-size: 3.5rem;
-            animation: moveTitle 15s linear infinite;
-            color: #2E86C1;
-        }
-        
-        /* Flip card styles */
-        .flip-card {
-            background-color: transparent;
-            width: 300px;
-            height: 150px;
-            perspective: 1000px;
-            margin: 20px auto;
+        /* Main page styling */
+        .stButton > button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
-
-        .flip-card-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
+        
+        .stButton > button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Headers styling */
+        h1 {
+            color: #2c3e50;
             text-align: center;
-            transition: transform 0.6s;
-            transform-style: preserve-3d;
+            padding: 20px 0;
         }
-
-        .flip-card:hover .flip-card-inner {
-            transform: rotateY(180deg);
-        }
-
-        .flip-card-front, .flip-card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-        }
-
-        .flip-card-front {
-            background-color: #2E86C1;
-            color: white;
-        }
-
-        .flip-card-back {
-            background-color: #1B4F72;
-            color: white;
-            transform: rotateY(180deg);
-        }
-
-        /* Additional styles */
+        
         h2 {
-            color: #2E86C1;
-            margin-bottom: 2rem;
+            color: #34495e;
+            padding: 15px 0;
         }
-
-        .stButton button {
-            width: 100%;
-            margin-bottom: 1rem;
+        
+        /* Card styling */
+        .css-1r6slb0 {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 10px 0;
         }
+        
+        /* Input fields styling */
+        .stTextInput > div > div > input {
+            border-radius: 5px;
+        }
+        
+        /* General page styling */
+        .main {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
         </style>
     """, unsafe_allow_html=True)
