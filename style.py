@@ -1,58 +1,55 @@
 import streamlit as st
 
-def set_page_style():
-    # Custom CSS for styling
+def apply_styles():
+    """Apply custom CSS styles to the Streamlit app"""
     st.markdown("""
         <style>
         /* Main title animation */
         @keyframes colorChange {
-            0% { color: #FF0000; }
-            50% { color: #FF4444; }
-            100% { color: #FF0000; }
+            0% { color: #ff0000; transform: scale(1); }
+            50% { color: #ff4444; transform: scale(1.1); }
+            100% { color: #ff0000; transform: scale(1); }
         }
         
-        .main-title {
-            font-size: 3.5em;
-            font-weight: bold;
+        .animated-title {
+            font-size: 4rem !important;
             text-align: center;
+            font-weight: bold;
             animation: colorChange 2s infinite;
-            margin-bottom: 2em;
         }
         
         /* Card styling */
-        .stCard {
+        .stExpander {
+            background-color: #f0f2f6;
             border-radius: 10px;
-            padding: 1em;
-            margin: 1em 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 10px 0;
+            padding: 10px;
         }
         
-        /* List styling */
-        .list-container {
-            margin: 2em 0;
-            padding: 1em;
-            background: #f8f9fa;
-            border-radius: 8px;
+        /* Button styling */
+        .stButton button {
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
         }
         
-        .list-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 1em;
-            color: #2c3e50;
+        .stButton button:hover {
+            background-color: #45a049;
         }
         
-        /* Tab styling */
-        .stTabs {
-            margin-top: 1em;
+        /* Sidebar styling */
+        .css-1d391kg {
+            padding: 20px;
+        }
+        
+        /* Custom layout for columns */
+        .row-widget.stRadio > div {
+            flex-direction: row;
+            justify-content: center;
         }
         </style>
     """, unsafe_allow_html=True)
-
-def create_card(title, description):
-    return f"""
-        <div class="stCard">
-            <h3>{title}</h3>
-            <p>{description}</p>
-        </div>
-    """
