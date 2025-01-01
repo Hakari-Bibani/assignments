@@ -1,64 +1,41 @@
-import streamlit as st
-
-def apply_style():
-    """Apply custom styling to the Streamlit app"""
+def apply_styles():
+    # Custom CSS with animation
     st.markdown("""
         <style>
-        /* Main container */
-        .main {
-            padding: 2rem;
+        @keyframes moveText {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
         
-        /* Button styling */
-        .stButton > button {
+        .moving-title {
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .moving-title h1 {
+            color: red;
+            font-size: 3em;
+            display: inline-block;
+            animation: moveText 10s linear infinite;
+        }
+        
+        .stButton button {
             width: 100%;
             margin: 5px 0;
-            background-color: #f0f2f6;
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
-            padding: 10px;
-            transition: all 0.3s ease;
         }
         
-        .stButton > button:hover {
-            background-color: #e0e0e0;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        /* Card styling */
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: transform 0.3s;
         }
         
-        /* Headers */
-        h3 {
-            color: #1f1f1f;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f2f6;
-            margin-bottom: 20px;
-        }
-        
-        /* Columns layout */
-        .row-widget.stHorizontal {
-            gap: 2rem;
-        }
-        
-        /* Card-like styling for buttons */
-        .stButton > button {
-            background: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-        }
-        
-        /* Hover effect for cards */
-        .stButton > button:hover {
+        .card:hover {
+            transform: scale(1.02);
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        /* Animation for title */
-        @keyframes glow {
-            0% { text-shadow: 0 0 10px rgba(255,0,0,0.5); }
-            50% { text-shadow: 0 0 20px rgba(255,0,0,0.7); }
-            100% { text-shadow: 0 0 10px rgba(255,0,0,0.5); }
-        }
-        
-        .title {
-            animation: glow 2s ease-in-out infinite;
         }
         </style>
     """, unsafe_allow_html=True)
