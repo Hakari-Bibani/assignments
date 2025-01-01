@@ -1,96 +1,71 @@
 import ast
-import pandas as pd
-from geopy.distance import geodesic
+import re
 
-def grade():
-    # Read the latest submission
-    df = pd.read_csv('grades/data_submission.csv')
-    latest_submission = df.iloc[-1]
-    code = latest_submission['code']
+def calculate_grade(code_submission):
+    grades = {
+        'code_structure': 0,  # Out of 30
+        'visualization': 0,   # Out of 40
+        'calculations': 0,    # Out of 30
+        'total_grade': 0
+    }
     
-    total_points = 0
+    # Check library imports (5 points)
+    required_libraries = ['geopy', 'folium']
+    for lib in required_libraries:
+        if lib in code_submission:
+            grades['code_structure'] += 2.5
+
+    # Check coordinate handling (5 points)
+    coordinates = [
+        (36.325735, 43.928414),
+        (36.393432, 44.586781),
+        (36.660477, 43.840174)
+    ]
     
-    # 1. Code Structure and Implementation (30 points)
+    for coord in coordinates:
+        if str(coord[0]) in code_submission and str(coord[1]) in code_submission:
+            grades['code_structure'] += 1.67
+
+    # Check for code execution (10 points)
     try:
-        # Parse the code to check imports
-        tree = ast.parse(code)
-        imports = [node for node in ast.walk(tree) if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom)]
-        required_libraries = ['folium', 'geopy']
-        
-        # Check imports (5 points)
-        import_points = sum(any(lib in str(imp) for imp in imports) for lib in required_libraries) * 2.5
-        total_points += import_points
-        
-        # Check coordinate handling (5 points)
-        coordinates = [
-            (36.325735, 43.928414),
-            (36.393432, 44.586781),
-            (36.660477, 43.840174)
-        ]
-        coord_points = 5 if all(str(coord) in code for coord in coordinates) else 0
-        total_points += coord_points
-        
-        # Code runs without errors (10 points)
-        try:
-            exec(code)
-            total_points += 10
-        except:
-            pass
-        
-        # Code efficiency (10 points) - basic check for clean code
-        lines = code.split('\n')
-        efficiency_points = 10 if len(lines) < 100 and not any(line.strip().startswith('print') for line in lines) else 5
-        total_points += efficiency_points
-        
+        ast.parse(code_submission)
+        grades['code_structure'] += 10
     except:
         pass
+
+    # Code efficiency and best practices (10 points)
+    if len(code_submission.split('\n')) < 100:  # Reasonable length
+        grades['code_structure'] += 5
+    if code_submission.count('def ') >= 1:  # Function usage
+        grades['code_structure'] += 5
+
+    # Map visualization checks (40 points)
+    if 'folium.Map' in code_submission:
+        grades['visualization'] += 15
+    if 'add_to(m)' in code_submission or 'add_to(map)' in code_submission:
+        grades['visualization'] += 15
+    if 'PolyLine' in code_submission:
+        grades['visualization'] += 10
+
+    # Distance calculations (30 points)
+    if 'geodesic' in code_submission:
+        grades['calculations'] += 10
     
-    # 2. Map Visualization (40 points)
-    try:
-        # Check for map generation (15 points)
-        if 'folium.Map' in code:
-            total_points += 15
-        
-        # Check for markers (15 points)
-        if 'folium.Marker' in code:
-            total_points += 15
-        
-        # Check for polylines (10 points)
-        if 'folium.PolyLine' in code:
-            total_points += 10
-            
-    except:
-        pass
+    # Check for correct distances (20 points)
+    correct_distances = [59.57, 73.14, 37.98]
+    for distance in correct_distances:
+        if str(round(distance, 2)) in code_submission:
+            grades['calculations'] += 6.67
+
+    # Calculate total grade
+    grades['total_grade'] = sum([
+        grades['code_structure'],
+        grades['visualization'],
+        grades['calculations']
+    ])
     
-    # 3. Distance Calculations (30 points)
-    try:
-        # Check for geodesic calculations (10 points)
-        if 'geodesic' in code:
-            total_points += 10
-        
-        # Check distance accuracy (20 points)
-        correct_distances = {
-            '1-2': 59.57,
-            '2-3': 73.14,
-            '1-3': 37.98
-        }
-        
-        # Execute code and check output
-        local_vars = {}
-        exec(code, globals(), local_vars)
-        
-        for var_name, var_value in local_vars.items():
-            if isinstance(var_value, (int, float)):
-                # Check if the value is close to any correct distance
-                for correct_dist in correct_distances.values():
-                    if abs(var_value - correct_dist) < 0.1:
-                        total_points += 6.67  # 20 points / 3 distances
-                        
-    except:
-        pass
+    # Round all grades
+    for key in grades:
+        grades[key] = round(grades[key], 2)
     
-    # Update grade in CSV
-    df.loc[df.index[-1], 'total'] = total_points
-    df.to_csv('grades/data_submission.csv', index=False)
-    
-    return total_points
+    return grades
