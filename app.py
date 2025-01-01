@@ -1,16 +1,17 @@
+# app.py
 import streamlit as st
 import pandas as pd
 from style import set_custom_style
 
+# Set page config must be the first Streamlit command
+st.set_page_config(
+    page_title="ImpactHub",
+    page_icon="📚",
+    layout="wide"
+)
+
 def main():
     set_custom_style()
-    
-    # Set page config
-    st.set_page_config(
-        page_title="ImpactHub",
-        page_icon="📚",
-        layout="wide"
-    )
     
     # Title with animation
     st.markdown('<h1 class="title">ImpactHub</h1>', unsafe_allow_html=True)
