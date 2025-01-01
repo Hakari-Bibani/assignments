@@ -1,39 +1,39 @@
 import streamlit as st
-import pandas as pd
-from pathlib import Path
-import importlib
+import webbrowser
 import style
+from pathlib import Path
 
-def load_css():
-    with open("style.py") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+# Set page configuration
+st.set_page_config(
+    page_title="ImpactHub",
+    page_icon="🎓",
+    layout="wide"
+)
 
 def main():
     # Apply custom styles
-    load_css()
+    style.apply_custom_styles()
     
-    # Animated title
+    # Create animated title
     st.markdown("""
         <div class="moving-title">
             <h1>ImpactHub</h1>
         </div>
     """, unsafe_allow_html=True)
 
-    # Create grid layout for flip cards
-    col1, col2, col3 = st.columns(3)
-    
-    # Weeks flip cards (1-15)
-    weeks = list(range(1, 16))
-    quizzes = list(range(1, 11))
-    
-    # Create flip cards for weeks
-    for i, week in enumerate(weeks):
-        with [col1, col2, col3][i % 3]:
+    # Create two columns for Weeks and Quizzes
+    col1, col2 = st.columns(2)
+
+    # Weeks Section
+    with col1:
+        st.markdown("<h2 style='text-align: center;'>Weekly Assignments</h2>", unsafe_allow_html=True)
+        for week in range(1, 16):
+            # Create flip card for each week
             st.markdown(f"""
-                <div class="flip-card" onclick="window.location.href='week{week}'">
+                <div class="flip-card" onclick="window.location.href='week{week}.py'">
                     <div class="flip-card-inner">
                         <div class="flip-card-front">
-                            <h2>Week {week}</h2>
+                            <h3>Week {week}</h3>
                         </div>
                         <div class="flip-card-back">
                             <p>Click to view Week {week} assignments</p>
@@ -42,16 +42,16 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Create flip cards for quizzes
-    for i, quiz in enumerate(quizzes):
-        with [col1, col2, col3][i % 3]:
+    # Quizzes Section
+    with col2:
+        st.markdown("<h2 style='text-align: center;'>Quizzes</h2>", unsafe_allow_html=True)
+        for quiz in range(1, 11):
+            # Create flip card for each quiz
             st.markdown(f"""
-                <div class="flip-card" onclick="window.location.href='quiz{quiz}'">
+                <div class="flip-card" onclick="window.location.href='quiz{quiz}.py'">
                     <div class="flip-card-inner">
                         <div class="flip-card-front">
-                            <h2>Quiz {quiz}</h2>
+                            <h3>Quiz {quiz}</h3>
                         </div>
                         <div class="flip-card-back">
                             <p>Click to view Quiz {quiz}</p>
