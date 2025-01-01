@@ -1,7 +1,7 @@
-streamlit==1.32.0
-pandas==2.2.0
-numpy==1.26.3
-plotly==5.18.0
-pillow==10.2.0
-streamlit-card==0.0.7
-streamlit-option-menu==0.3.12
+streamlit
+pandas
+numpy
+plotly
+pillow
+streamlit-card
+streamlit-option-menu
