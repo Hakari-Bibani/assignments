@@ -1,17 +1,19 @@
-# app.py
 import streamlit as st
 import pandas as pd
 from style import apply_style
 import importlib
+
+# Must be the first Streamlit command
+st.set_page_config(page_title="ImpactHub", layout="wide")
+
+# Apply custom styling
+apply_style()
 
 # Initialize session state
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'main'
 if 'submission_data' not in st.session_state:
     st.session_state.submission_data = {}
-
-# Apply custom styling
-apply_style()
 
 def save_submission(data):
     """Save submission data to CSV"""
@@ -155,8 +157,6 @@ def create_quiz_page(quiz_num):
             st.error(f"Error grading quiz: {str(e)}")
 
 def main():
-    st.set_page_config(page_title="ImpactHub", layout="wide")
-    
     if st.session_state.current_page == 'main':
         st.title("ImpactHub")
         
