@@ -1,7 +1,5 @@
 streamlit
 pandas
-pillow
+Pillow
+st-pages
 streamlit-card
-streamlit-option-menu
-hydralit_components
-numpy
