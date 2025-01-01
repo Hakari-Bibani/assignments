@@ -61,22 +61,3 @@ with col2:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
-# Sidebar navigation
-st.sidebar.title("Navigation")
-
-# Assignment tabs in sidebar
-st.sidebar.markdown("### Assignments")
-for week in range(1, 16):
-    if st.sidebar.button(f"Week {week}"):
-        # Import and run the corresponding week's script
-        week_module = importlib.import_module(f"week{week}")
-        week_module.main()
-
-# Quiz tabs in sidebar
-st.sidebar.markdown("### Quizzes")
-for quiz in range(1, 11):
-    if st.sidebar.button(f"Quiz {quiz}"):
-        # Import and run the corresponding quiz script
-        quiz_module = importlib.import_module(f"quiz{quiz}")
-        quiz_module.main()
