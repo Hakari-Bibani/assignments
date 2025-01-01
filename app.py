@@ -1,8 +1,14 @@
+# app.py
 import streamlit as st
 import pandas as pd
-from pathlib import Path
-import importlib
+import os
 import sys
+from pathlib import Path
+
+# Add the current directory to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
 from style import apply_style
 
 # Configure page settings
@@ -15,21 +21,66 @@ st.set_page_config(
 # Apply custom styling
 apply_style()
 
-# Create animated title
-st.markdown("""
-    <div class="animate-title">
-        <h1>ImpactHub</h1>
-    </div>
-""", unsafe_allow_html=True)
+def create_pages_directory():
+    # Create pages directory if it doesn't exist
+    pages_dir = Path(current_dir) / "pages"
+    pages_dir.mkdir(exist_ok=True)
+    
+    # Create symbolic links for week files
+    for week in range(1, 16):
+        week_file = pages_dir / f"{week}_Week_{week}.py"
+        if not week_file.exists():
+            original_file = Path(current_dir) / f"week{week}.py"
+            if original_file.exists():
+                week_file.write_text(f'''
+import streamlit as st
+import sys
+import os
 
-def load_module(module_name):
-    try:
-        return importlib.import_module(module_name)
-    except ImportError:
-        st.error(f"Could not load module: {module_name}")
-        return None
+# Add parent directory to path
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
+
+# Import the week module
+import week{week}
+
+# Run the week's content
+week{week}.run()
+''')
+    
+    # Create symbolic links for quiz files
+    for quiz in range(1, 11):
+        quiz_file = pages_dir / f"{quiz+15}_Quiz_{quiz}.py"
+        if not quiz_file.exists():
+            original_file = Path(current_dir) / f"quiz{quiz}.py"
+            if original_file.exists():
+                quiz_file.write_text(f'''
+import streamlit as st
+import sys
+import os
+
+# Add parent directory to path
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
+
+# Import the quiz module
+import quiz{quiz}
+
+# Run the quiz content
+quiz{quiz}.run()
+''')
 
 def main():
+    # Create pages for navigation
+    create_pages_directory()
+    
+    # Display animated title
+    st.markdown("""
+        <div class="animate-title">
+            <h1>ImpactHub</h1>
+        </div>
+    """, unsafe_allow_html=True)
+    
     # Create two columns for weeks and quizzes
     col1, col2 = st.columns(2)
     
@@ -44,10 +95,8 @@ def main():
                     <p>Assignment {week}</p>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"Start Week {week}", key=f"week_{week}"):
-                    module = load_module(f"week{week}")
-                    if module:
-                        module.run()
+                week_path = f"Week_{week}"
+                st.link_button(f"Start Week {week}", week_path)
     
     # Quizzes column
     with col2:
@@ -60,10 +109,8 @@ def main():
                     <p>Assessment {quiz}</p>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"Start Quiz {quiz}", key=f"quiz_{quiz}"):
-                    module = load_module(f"quiz{quiz}")
-                    if module:
-                        module.run()
+                quiz_path = f"Quiz_{quiz}"
+                st.link_button(f"Start Quiz {quiz}", quiz_path)
 
 if __name__ == "__main__":
     main()
