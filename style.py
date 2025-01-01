@@ -34,18 +34,54 @@ def apply_custom_styles():
             padding: 1rem;
         }
         
-        /* Card styling */
-        .card {
-            background-color: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            cursor: pointer;
+        /* Card container styling */
+        .card-container {
+            display: flex;
+            flex-direction: column;
             margin-bottom: 1rem;
         }
         
-        .card:hover {
+        /* Card styling */
+        .card {
+            background-color: white;
+            border-radius: 10px 10px 0 0;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        /* Tabs styling */
+        .tabs {
+            display: flex;
+            border-radius: 0 0 10px 10px;
+            overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .assignment-tab {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .grade-tab {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .tab:hover {
+            filter: brightness(90%);
+        }
+        
+        .card-container:hover .card {
             transform: translateY(-5px);
             box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
         }
