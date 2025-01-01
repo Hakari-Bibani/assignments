@@ -1,51 +1,66 @@
 import streamlit as st
 
-def apply_styles():
-    # Custom CSS styles
+def apply_custom_style():
+    """Apply custom styling to the Streamlit app"""
     st.markdown("""
         <style>
-        /* Moving title animation */
-        @keyframes moveText {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        /* Main container */
+        .main {
+            padding: 2rem;
         }
         
-        .moving-title {
-            overflow: hidden;
-            white-space: nowrap;
-            margin-bottom: 2rem;
-        }
-        
-        .moving-title h1 {
-            display: inline-block;
-            animation: moveText 15s linear infinite;
-            color: red;
-            font-size: 4rem;
-            font-weight: bold;
-        }
-        
-        /* Button styles */
+        /* Button styling */
         .stButton > button {
-            width: 100%;
-            margin: 0.5rem 0;
             background-color: #f0f2f6;
-            border: 1px solid #e0e3e9;
+            border: 1px solid #e0e0e0;
             border-radius: 5px;
-            padding: 0.5rem;
+            color: #31333F;
+            margin: 5px 0;
             transition: all 0.3s ease;
+            width: 100%;
+            padding: 10px;
         }
         
         .stButton > button:hover {
-            background-color: #e0e3e9;
+            background-color: #0066cc;
+            color: white;
             transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Headers */
+        h1 {
+            color: red;
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 2rem;
+        }
+        
+        h2 {
+            color: #31333F;
+            margin-bottom: 1rem;
+        }
+        
+        /* Columns spacing */
+        .column {
+            padding: 1rem;
+            background: white;
+            border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
-        /* Section headers */
-        h2 {
-            color: #2c3e50;
+        /* Card styling */
+        .stButton > button {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
             margin-bottom: 1rem;
-            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+        
+        .stButton > button:hover {
+            transform: translateY(-2px);
         }
         </style>
     """, unsafe_allow_html=True)
