@@ -4,3 +4,4 @@ pillow
 streamlit-card
 streamlit-option-menu
 hydralit_components
+numpy
