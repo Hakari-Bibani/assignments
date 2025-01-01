@@ -1,11 +1,5 @@
 streamlit
 pandas
-numpy
-pillow
-plotly
-matplotlib
-seaborn
-openpyxl
-xlrd
-python-dotenv
-folium
+streamlit-card
+pathlib
+importlib-metadata
