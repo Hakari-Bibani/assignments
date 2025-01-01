@@ -1,67 +1,72 @@
 import streamlit as st
 from style import apply_custom_style
 import pandas as pd
-import os
+from pathlib import Path
 
-def main():
-    # Apply custom styling
-    apply_custom_style()
-    
-    # Title with animation effect using HTML/CSS
-    st.markdown(
-        """
-        <div class="moving-title">
-            <h1>ImpactHub</h1>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+# Configure Streamlit page
+st.set_page_config(page_title="ImpactHub", layout="wide")
 
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
+# Apply custom styling
+apply_custom_style()
+
+# Create title with animation
+st.markdown("""
+    <div class="moving-title">
+        <h1>ImpactHub</h1>
+    </div>
+""", unsafe_allow_html=True)
+
+# Initialize session state for navigation
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'main'
+
+# Sidebar navigation
+with st.sidebar:
+    st.title("Navigation")
     
-    # Create tabs for Assignments and Quizzes
-    tab_selection = st.sidebar.radio("Select Category:", ["Assignments", "Quizzes"])
+    # Assignments section
+    st.header("Assignments")
+    for week in range(1, 16):
+        if st.button(f"Week {week}", key=f"week_{week}"):
+            try:
+                module = __import__(f"week{week}")
+                st.session_state.current_page = f"week{week}"
+            except ImportError:
+                st.error(f"Week {week} content not available")
     
-    if tab_selection == "Assignments":
+    # Quizzes section
+    st.header("Quizzes")
+    for quiz in range(1, 11):
+        if st.button(f"Quiz {quiz}", key=f"quiz_{quiz}"):
+            try:
+                module = __import__(f"quiz{quiz}")
+                st.session_state.current_page = f"quiz{quiz}"
+            except ImportError:
+                st.error(f"Quiz {quiz} content not available")
+
+# Main content area
+if st.session_state.current_page == 'main':
+    # Create two columns for assignments and quizzes
+    col1, col2 = st.columns(2)
+    
+    with col1:
         st.header("Weekly Assignments")
-        # Create columns for a grid layout
-        cols = st.columns(3)
-        for i in range(15):
-            with cols[i % 3]:
-                if st.button(f"Week {i+1}", key=f"week_{i+1}", 
-                           use_container_width=True):
-                    try:
-                        # Import and run the corresponding week's script
-                        week_module = __import__(f"week{i+1}")
-                        week_module.run()
-                    except ImportError:
-                        st.error(f"Week {i+1} content not found.")
+        for week in range(1, 16):
+            with st.container():
+                st.markdown(f"""
+                    <div class="card">
+                        <h3>Week {week}</h3>
+                        <p>Assignment for Week {week}</p>
+                    </div>
+                """, unsafe_allow_html=True)
     
-    else:  # Quizzes tab
+    with col2:
         st.header("Quizzes")
-        # Create columns for a grid layout
-        cols = st.columns(3)
-        for i in range(10):
-            with cols[i % 3]:
-                if st.button(f"Quiz {i+1}", key=f"quiz_{i+1}", 
-                           use_container_width=True):
-                    try:
-                        # Import and run the corresponding quiz script
-                        quiz_module = __import__(f"quiz{i+1}")
-                        quiz_module.run()
-                    except ImportError:
-                        st.error(f"Quiz {i+1} content not found.")
-
-    # Load and display grades if they exist
-    try:
-        grades_df = pd.read_csv('grades/data_submission.csv')
-        if not grades_df.empty:
-            st.sidebar.markdown("---")
-            st.sidebar.header("Grades Overview")
-            st.sidebar.dataframe(grades_df)
-    except FileNotFoundError:
-        pass
-
-if __name__ == "__main__":
-    main()
+        for quiz in range(1, 11):
+            with st.container():
+                st.markdown(f"""
+                    <div class="card">
+                        <h3>Quiz {quiz}</h3>
+                        <p>Quiz {quiz} Assessment</p>
+                    </div>
+                """, unsafe_allow_html=True)
