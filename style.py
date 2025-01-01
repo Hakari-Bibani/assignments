@@ -1,51 +1,30 @@
-import streamlit as st
+button_style = {
+    "style": {
+        "backgroundColor": "#f0f2f6",
+        "border": "1px solid #e0e0e0",
+        "borderRadius": "5px",
+        "padding": "10px",
+        "margin": "5px 0",
+        "cursor": "pointer",
+        "transition": "background-color 0.3s",
+    }
+}
 
-def apply_custom_style():
-    # Custom CSS for styling
-    st.markdown("""
-        <style>
-        /* Moving title animation */
-        @keyframes moveTitle {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        .moving-title {
-            overflow: hidden;
-            white-space: nowrap;
-            margin-bottom: 2rem;
-        }
-        
-        .red-title {
-            display: inline-block;
-            color: red;
-            font-size: 3.5rem;
-            font-weight: bold;
-            animation: moveTitle 15s linear infinite;
-        }
-        
-        /* Card styling */
-        .stButton > button {
-            width: 100%;
-            background-color: #ffffff;
-            color: #000000;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-            transition: all 0.3s ease;
-        }
-        
-        .stButton > button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            background-color: #f8f9fa;
-        }
-        
-        h2 {
-            color: #2c3e50;
-            margin-bottom: 1rem;
-            font-size: 1.8rem;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+card_style = """
+<style>
+    .stButton button {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 15px;
+        text-align: center;
+        width: 100%;
+        margin: 5px 0;
+        transition: transform 0.2s;
+    }
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>
+"""
