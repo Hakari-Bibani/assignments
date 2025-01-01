@@ -3,3 +3,8 @@ pandas
 pathlib
 importlib
 python-dateutil
+numpy
+plotly
+pillow
+streamlit-option-menu
+streamlit-card
