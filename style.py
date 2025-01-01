@@ -1,58 +1,51 @@
 import streamlit as st
 
-def custom_style():
+def apply_styles():
+    # Custom CSS styles
     st.markdown("""
         <style>
-        /* Main page styling */
+        /* Moving title animation */
+        @keyframes moveText {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .moving-title {
+            overflow: hidden;
+            white-space: nowrap;
+            margin-bottom: 2rem;
+        }
+        
+        .moving-title h1 {
+            display: inline-block;
+            animation: moveText 15s linear infinite;
+            color: red;
+            font-size: 4rem;
+            font-weight: bold;
+        }
+        
+        /* Button styles */
         .stButton > button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
+            width: 100%;
+            margin: 0.5rem 0;
+            background-color: #f0f2f6;
+            border: 1px solid #e0e3e9;
             border-radius: 5px;
-            cursor: pointer;
+            padding: 0.5rem;
             transition: all 0.3s ease;
         }
         
         .stButton > button:hover {
-            background-color: #45a049;
+            background-color: #e0e3e9;
             transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
-        /* Headers styling */
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            padding: 20px 0;
-        }
-        
+        /* Section headers */
         h2 {
-            color: #34495e;
-            padding: 15px 0;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-weight: 600;
         }
-        
-        /* Card styling */
-        .css-1r6slb0 {
-            background-color: #ffffff;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin: 10px 0;
-        }
-        
-        /* Input fields styling */
-        .stTextInput > div > div > input {
-            border-radius: 5px;
-        }
-        
-        /* General page styling */
-        .main {
-            padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
         </style>
     """, unsafe_allow_html=True)
