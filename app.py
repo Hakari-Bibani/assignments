@@ -1,70 +1,68 @@
 import streamlit as st
+from style import apply_custom_style
+import time
 
-# Configure page settings
-st.set_page_config(page_title="ImpactHub", layout="wide")
+# Apply custom styling
+apply_custom_style()
 
-# Custom CSS for moving title
+# Title animation function
+def animate_title():
+    title_text = "ImpactHub"
+    title_placeholder = st.empty()
+    while True:
+        title_placeholder.markdown(f'<h1 class="moving-title">{title_text}</h1>', unsafe_allow_html=True)
+        time.sleep(0.1)
+
+# Main layout
 st.markdown("""
     <style>
-    @keyframes moveText {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
-    }
-    
     .moving-title {
-        overflow: hidden;
-        white-space: nowrap;
-        margin-bottom: 2rem;
-    }
-    
-    .moving-title h1 {
-        display: inline-block;
-        animation: moveText 15s linear infinite;
         color: red;
-        font-size: 4rem;
-        font-weight: bold;
+        font-size: 4em;
+        text-align: center;
+        animation: moveTitle 2s infinite;
     }
     
-    .stButton > button {
-        width: 100%;
-        margin: 0.5rem 0;
-        background-color: #f0f2f6;
-        border: 1px solid #e0e3e9;
-        border-radius: 5px;
-        padding: 0.5rem;
-    }
-    
-    h2 {
-        color: #2c3e50;
-        margin-bottom: 1rem;
-        font-weight: 600;
+    @keyframes moveTitle {
+        0% { transform: translateX(0); }
+        50% { transform: translateX(20px); }
+        100% { transform: translateX(0); }
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Moving title
-st.markdown("""
-    <div class="moving-title">
-        <h1>ImpactHub</h1>
-    </div>
-""", unsafe_allow_html=True)
+st.markdown('<h1 class="moving-title">ImpactHub</h1>', unsafe_allow_html=True)
 
-# Create two columns
+# Create two columns for Weeks and Quizzes
 col1, col2 = st.columns(2)
 
 # Weeks Section
 with col1:
-    st.markdown("## Weeks")
-    for week_num in range(1, 16):
-        if st.button(f"Week {week_num}", key=f"week_{week_num}"):
-            st.write(f"Loading Week {week_num} content...")
+    st.markdown("<h2 style='text-align: center;'>Weekly Assignments</h2>", unsafe_allow_html=True)
+    weeks = [f"Week {i}" for i in range(1, 16)]
+    for week in weeks:
+        if st.button(week, key=f"btn_{week}", use_container_width=True):
+            # Import and run the corresponding week's script
+            try:
+                module_name = f"week{week.split()[-1]}"
+                exec(f"import {module_name}")
+                exec(f"{module_name}.main()")
+            except Exception as e:
+                st.error(f"Error loading {week}: {str(e)}")
 
 # Quizzes Section
 with col2:
-    st.markdown("## Quizzes")
-    for quiz_num in range(1, 11):
-        if st.button(f"Quiz {quiz_num}", key=f"quiz_{quiz_num}"):
-            st.write(f"Loading Quiz {quiz_num} content...")
+    st.markdown("<h2 style='text-align: center;'>Quizzes</h2>", unsafe_allow_html=True)
+    quizzes = [f"Quiz {i}" for i in range(1, 11)]
+    for quiz in quizzes:
+        if st.button(quiz, key=f"btn_{quiz}", use_container_width=True):
+            # Import and run the corresponding quiz script
+            try:
+                module_name = f"quiz{quiz.split()[-1]}"
+                exec(f"import {module_name}")
+                exec(f"{module_name}.main()")
+            except Exception as e:
+                st.error(f"Error loading {quiz}: {str(e)}")
 
 if __name__ == "__main__":
-    pass
+    animate_title()
