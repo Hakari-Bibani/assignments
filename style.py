@@ -1,11 +1,8 @@
-import streamlit as st
-
 def apply_custom_style():
-    # Custom CSS styling
     st.markdown("""
         <style>
         /* Moving title animation */
-        @keyframes moveText {
+        @keyframes moveTitle {
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
@@ -18,34 +15,51 @@ def apply_custom_style():
         
         .moving-title h1 {
             display: inline-block;
-            animation: moveText 15s linear infinite;
             color: red;
             font-size: 3.5rem;
-            font-weight: bold;
+            animation: moveTitle 15s linear infinite;
+        }
+        
+        /* Card styling */
+        .card {
+            padding: 1.5rem;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: #1f1f1f;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card p {
+            color: #666;
+            margin: 0;
+        }
+        
+        /* Sidebar styling */
+        .sidebar .sidebar-content {
+            background-color: #f8f9fa;
         }
         
         /* Button styling */
         .stButton button {
             width: 100%;
-            margin: 0.5rem 0;
-            padding: 0.5rem;
-            border-radius: 5px;
-            background-color: #f0f2f6;
-            transition: background-color 0.3s;
+            margin-bottom: 0.5rem;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            transition: background-color 0.3s ease;
         }
         
         .stButton button:hover {
-            background-color: #e0e2e6;
-        }
-        
-        /* Sidebar styling */
-        .css-1d391kg {
-            padding: 2rem 1rem;
-        }
-        
-        /* Headers styling */
-        h1, h2, h3 {
-            margin-bottom: 1rem;
+            background-color: #f0f0f0;
         }
         </style>
     """, unsafe_allow_html=True)
