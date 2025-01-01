@@ -1,17 +1,17 @@
 import streamlit as st
-from style import apply_custom_style
+from style import load_css
+import json
 import pandas as pd
-from pathlib import Path
 
-# Configure Streamlit page
+# Load custom CSS
+load_css()
+
+# Configure the page
 st.set_page_config(page_title="ImpactHub", layout="wide")
 
-# Apply custom styling
-apply_custom_style()
-
-# Create title with animation
+# Add custom HTML for animated title
 st.markdown("""
-    <div class="moving-title">
+    <div class="animated-title">
         <h1>ImpactHub</h1>
     </div>
 """, unsafe_allow_html=True)
@@ -28,45 +28,62 @@ with st.sidebar:
     st.header("Assignments")
     for week in range(1, 16):
         if st.button(f"Week {week}", key=f"week_{week}"):
-            try:
-                module = __import__(f"week{week}")
-                st.session_state.current_page = f"week{week}"
-            except ImportError:
-                st.error(f"Week {week} content not available")
+            st.session_state.current_page = f"week{week}"
     
     # Quizzes section
     st.header("Quizzes")
     for quiz in range(1, 11):
         if st.button(f"Quiz {quiz}", key=f"quiz_{quiz}"):
-            try:
-                module = __import__(f"quiz{quiz}")
-                st.session_state.current_page = f"quiz{quiz}"
-            except ImportError:
-                st.error(f"Quiz {quiz} content not available")
+            st.session_state.current_page = f"quiz{quiz}"
 
-# Main content area
+# Main content
 if st.session_state.current_page == 'main':
-    # Create two columns for assignments and quizzes
+    # Create two columns for Assignments and Quizzes
     col1, col2 = st.columns(2)
     
     with col1:
-        st.header("Weekly Assignments")
+        st.header("Assignments")
         for week in range(1, 16):
             with st.container():
+                # Create flip card using HTML/CSS
                 st.markdown(f"""
-                    <div class="card">
-                        <h3>Week {week}</h3>
-                        <p>Assignment for Week {week}</p>
+                    <div class="flip-card">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front">
+                                <h3>Week {week}</h3>
+                            </div>
+                            <div class="flip-card-back">
+                                <p>Assignment {week} Details</p>
+                                <p>Click the Week {week} tab in sidebar to start</p>
+                            </div>
+                        </div>
                     </div>
                 """, unsafe_allow_html=True)
+                st.write("")  # Add spacing between cards
     
     with col2:
         st.header("Quizzes")
         for quiz in range(1, 11):
             with st.container():
                 st.markdown(f"""
-                    <div class="card">
-                        <h3>Quiz {quiz}</h3>
-                        <p>Quiz {quiz} Assessment</p>
+                    <div class="flip-card">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front">
+                                <h3>Quiz {quiz}</h3>
+                            </div>
+                            <div class="flip-card-back">
+                                <p>Quiz {quiz} Details</p>
+                                <p>Click the Quiz {quiz} tab in sidebar to start</p>
+                            </div>
+                        </div>
                     </div>
                 """, unsafe_allow_html=True)
+                st.write("")  # Add spacing between cards
+
+else:
+    # Import and run the appropriate week or quiz module
+    try:
+        module = __import__(st.session_state.current_page)
+        module.main()
+    except ImportError:
+        st.error(f"Module {st.session_state.current_page}.py not found!")
