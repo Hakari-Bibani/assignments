@@ -1,68 +1,53 @@
 import streamlit as st
-from style import apply_custom_style
-import time
+import base64
+import os
+from style import page_config
 
-# Apply custom styling
-apply_custom_style()
+def create_animation_html(text):
+    return f"""
+    <div style="display: flex; justify-content: center; margin: 20px 0;">
+        <h1 style="color: red; font-size: 3.5em;">
+            <marquee behavior="alternate" direction="left">{text}</marquee>
+        </h1>
+    </div>
+    """
 
-# Title animation function
-def animate_title():
-    title_text = "ImpactHub"
-    title_placeholder = st.empty()
-    while True:
-        title_placeholder.markdown(f'<h1 class="moving-title">{title_text}</h1>', unsafe_allow_html=True)
-        time.sleep(0.1)
-
-# Main layout
-st.markdown("""
-    <style>
-    .moving-title {
-        color: red;
-        font-size: 4em;
-        text-align: center;
-        animation: moveTitle 2s infinite;
-    }
+def main():
+    page_config()
     
-    @keyframes moveTitle {
-        0% { transform: translateX(0); }
-        50% { transform: translateX(20px); }
-        100% { transform: translateX(0); }
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.markdown('<h1 class="moving-title">ImpactHub</h1>', unsafe_allow_html=True)
-
-# Create two columns for Weeks and Quizzes
-col1, col2 = st.columns(2)
-
-# Weeks Section
-with col1:
-    st.markdown("<h2 style='text-align: center;'>Weekly Assignments</h2>", unsafe_allow_html=True)
-    weeks = [f"Week {i}" for i in range(1, 16)]
-    for week in weeks:
-        if st.button(week, key=f"btn_{week}", use_container_width=True):
-            # Import and run the corresponding week's script
-            try:
-                module_name = f"week{week.split()[-1]}"
-                exec(f"import {module_name}")
-                exec(f"{module_name}.main()")
-            except Exception as e:
-                st.error(f"Error loading {week}: {str(e)}")
-
-# Quizzes Section
-with col2:
-    st.markdown("<h2 style='text-align: center;'>Quizzes</h2>", unsafe_allow_html=True)
-    quizzes = [f"Quiz {i}" for i in range(1, 11)]
-    for quiz in quizzes:
-        if st.button(quiz, key=f"btn_{quiz}", use_container_width=True):
-            # Import and run the corresponding quiz script
-            try:
-                module_name = f"quiz{quiz.split()[-1]}"
-                exec(f"import {module_name}")
-                exec(f"{module_name}.main()")
-            except Exception as e:
-                st.error(f"Error loading {quiz}: {str(e)}")
+    # Display animated title
+    st.markdown(create_animation_html("ImpactHub"), unsafe_allow_html=True)
+    
+    # Create two columns for Weeks and Quizzes
+    col1, col2 = st.columns(2)
+    
+    # Weeks Section
+    with col1:
+        st.markdown("<h2 style='text-align: center;'>Weeks</h2>", unsafe_allow_html=True)
+        for week in range(1, 16):
+            if st.button(f"Week {week}", key=f"week_{week}", 
+                        use_container_width=True,
+                        help=f"Click to go to Week {week} assignments"):
+                try:
+                    # Import and run the specific week's script
+                    exec(f"import week{week}")
+                    exec(f"week{week}.main()")
+                except ImportError:
+                    st.error(f"Week {week} content is not available yet.")
+    
+    # Quizzes Section
+    with col2:
+        st.markdown("<h2 style='text-align: center;'>Quizzes</h2>", unsafe_allow_html=True)
+        for quiz in range(1, 11):
+            if st.button(f"Quiz {quiz}", key=f"quiz_{quiz}", 
+                        use_container_width=True,
+                        help=f"Click to go to Quiz {quiz}"):
+                try:
+                    # Import and run the specific quiz script
+                    exec(f"import quiz{quiz}")
+                    exec(f"quiz{quiz}.main()")
+                except ImportError:
+                    st.error(f"Quiz {quiz} content is not available yet.")
 
 if __name__ == "__main__":
-    animate_title()
+    main()
