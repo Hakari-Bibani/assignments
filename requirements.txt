@@ -1,9 +1,4 @@
-streamlit==1.32.0
-pandas==2.2.0
-numpy==1.26.4
-plotly==5.18.0
-pillow==10.2.0
-openpyxl==3.1.2
-streamlit-option-menu==0.3.12
-streamlit-card==1.0.0
-watchdog==3.0.0
+streamlit==1.31.0
+pandas==2.1.4
+pathlib==1.0.1
+importlib-metadata==7.0.1
