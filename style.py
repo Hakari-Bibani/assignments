@@ -1,65 +1,68 @@
-def apply_custom_style():
-    st.markdown("""
+def load_css():
+    return st.markdown("""
         <style>
-        /* Moving title animation */
-        @keyframes moveTitle {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        /* Animated title */
+        .animated-title {
+            text-align: center;
+            animation: moveTitle 2s infinite alternate;
         }
         
-        .moving-title {
-            overflow: hidden;
-            white-space: nowrap;
-            margin-bottom: 2rem;
-        }
-        
-        .moving-title h1 {
-            display: inline-block;
+        .animated-title h1 {
             color: red;
-            font-size: 3.5rem;
-            animation: moveTitle 15s linear infinite;
+            font-size: 4rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         
-        /* Card styling */
-        .card {
-            padding: 1.5rem;
-            border-radius: 10px;
-            background-color: #f8f9fa;
-            margin-bottom: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
+        @keyframes moveTitle {
+            from {transform: translateY(0px);}
+            to {transform: translateY(10px);}
         }
         
-        .card:hover {
-            transform: translateY(-5px);
+        /* Flip Cards */
+        .flip-card {
+            background-color: transparent;
+            width: 300px;
+            height: 200px;
+            perspective: 1000px;
+            margin: 20px 0;
         }
         
-        .card h3 {
-            color: #1f1f1f;
-            margin-bottom: 0.5rem;
-        }
-        
-        .card p {
-            color: #666;
-            margin: 0;
-        }
-        
-        /* Sidebar styling */
-        .sidebar .sidebar-content {
-            background-color: #f8f9fa;
-        }
-        
-        /* Button styling */
-        .stButton button {
+        .flip-card-inner {
+            position: relative;
             width: 100%;
-            margin-bottom: 0.5rem;
-            background-color: #ffffff;
-            border: 1px solid #ddd;
-            transition: background-color 0.3s ease;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
         }
         
-        .stButton button:hover {
-            background-color: #f0f0f0;
+        .flip-card:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .flip-card-front {
+            background-color: #2e7d32;
+            color: white;
+        }
+        
+        .flip-card-back {
+            background-color: #1565c0;
+            color: white;
+            transform: rotateY(180deg);
         }
         </style>
     """, unsafe_allow_html=True)
