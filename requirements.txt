@@ -6,11 +6,9 @@ matplotlib
 seaborn
 scikit-learn
 pytest
-black
-flake8
+xlrd
+openpyxl
 python-dotenv
 requests
 beautifulsoup4
-lxml
-openpyxl
-XlsxWriter
+pillow
