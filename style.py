@@ -1,66 +1,55 @@
 import streamlit as st
 
-def apply_custom_style():
-    """Apply custom styling to the Streamlit app"""
+def page_config():
+    # Configure the page
+    st.set_page_config(
+        page_title="ImpactHub",
+        page_icon="📚",
+        layout="wide",
+        initial_sidebar_state="collapsed"
+    )
+
+    # Custom CSS
     st.markdown("""
         <style>
-        /* Main container */
-        .main {
-            padding: 2rem;
-        }
-        
-        /* Button styling */
-        .stButton > button {
+        /* Main content styling */
+        .stButton button {
             background-color: #f0f2f6;
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
-            color: #31333F;
+            border: 2px solid #4CAF50;
+            color: black;
+            padding: 10px 24px;
             margin: 5px 0;
+            cursor: pointer;
+            border-radius: 10px;
             transition: all 0.3s ease;
-            width: 100%;
-            padding: 10px;
         }
         
-        .stButton > button:hover {
-            background-color: #0066cc;
+        .stButton button:hover {
+            background-color: #4CAF50;
             color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transform: scale(1.02);
         }
         
-        /* Headers */
+        /* Header styling */
         h1 {
-            color: red;
+            color: #ff0000;
             text-align: center;
-            font-size: 3em;
-            margin-bottom: 2rem;
+            padding: 20px;
+            font-family: 'Arial Black', sans-serif;
         }
         
         h2 {
-            color: #31333F;
-            margin-bottom: 1rem;
+            color: #2c3e50;
+            font-family: 'Arial', sans-serif;
+            margin-bottom: 20px;
         }
         
-        /* Columns spacing */
-        .column {
-            padding: 1rem;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        /* Card styling */
-        .stButton > button {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            transition: transform 0.2s ease;
-        }
-        
-        .stButton > button:hover {
-            transform: translateY(-2px);
+        /* Error message styling */
+        .stError {
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 5px solid #ff5252;
         }
         </style>
     """, unsafe_allow_html=True)
