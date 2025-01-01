@@ -22,12 +22,22 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-def create_card(title, description, link):
-    """Create a clickable card with custom styling."""
+def create_card(title, description, week_num=None, is_quiz=False):
+    """Create a card with tabs for assignment and grading pages."""
     card_html = f"""
-    <div class="card" onclick="window.location.href='{link}'">
-        <h3>{title}</h3>
-        <p>{description}</p>
+    <div class="card-container">
+        <div class="card">
+            <h3>{title}</h3>
+            <p>{description}</p>
+        </div>
+        <div class="tabs">
+            <div class="tab assignment-tab" onclick="window.location.href='{'quiz' if is_quiz else 'week'}{week_num}'">
+                {'Quiz' if is_quiz else 'Assignment'}
+            </div>
+            <div class="tab grade-tab" onclick="window.location.href='grade{week_num}'">
+                Grade
+            </div>
+        </div>
     </div>
     """
     return st.markdown(card_html, unsafe_allow_html=True)
@@ -45,7 +55,8 @@ def main():
             create_card(
                 f"Week {week}",
                 f"Assignment for Week {week}",
-                f"week{week}"
+                week_num=week,
+                is_quiz=False
             )
     
     # Quizzes Section
@@ -57,7 +68,8 @@ def main():
             create_card(
                 f"Quiz {quiz}",
                 f"Quiz {quiz} Assessment",
-                f"quiz{quiz}"
+                week_num=quiz,
+                is_quiz=True
             )
 
     st.markdown('</div>', unsafe_allow_html=True)
