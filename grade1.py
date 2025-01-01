@@ -1,106 +1,55 @@
-from geopy.distance import geodesic
-import ast
-import re
-
 def grade_assignment(code):
     total_points = 0
-    feedback = []
-    
-    # Initialize coordinate points
-    POINT1 = (36.325735, 43.928414)
-    POINT2 = (36.393432, 44.586781)
-    POINT3 = (36.660477, 43.840174)
-    
-    CORRECT_DISTANCES = {
-        'p1_p2': 59.57,
-        'p2_p3': 73.14,
-        'p1_p3': 37.98
-    }
     
     # 1. Code Structure and Implementation (30 points)
     try:
-        # Check imports (5 points)
-        required_libraries = ['geopy', 'folium']
-        found_libraries = []
-        import_pattern = r'import\s+(\w+)|from\s+(\w+)\s+import'
-        matches = re.findall(import_pattern, code)
-        for match in matches:
-            lib = match[0] if match[0] else match[1]
-            found_libraries.append(lib)
+        # Check for proper library imports (5 points)
+        if all(lib in code for lib in ['geopy', 'folium']):
+            total_points += 5
         
-        library_points = min(5, len([lib for lib in required_libraries if any(found in lib for found in found_libraries)]) * 2.5)
-        total_points += library_points
-        feedback.append(f"Library imports: {library_points}/5 points")
-        
-        # Check coordinate handling (5 points)
-        coordinate_points = 0
-        if str(POINT1) in code.replace(' ', ''): coordinate_points += 1.67
-        if str(POINT2) in code.replace(' ', ''): coordinate_points += 1.67
-        if str(POINT3) in code.replace(' ', ''): coordinate_points += 1.67
-        total_points += coordinate_points
-        feedback.append(f"Coordinate handling: {coordinate_points:.2f}/5 points")
+        # Check for correct coordinate handling (5 points)
+        coordinates = [
+            "36.325735, 43.928414",
+            "36.393432, 44.586781",
+            "36.660477, 43.840174"
+        ]
+        coord_points = sum(1.67 for coord in coordinates if coord in code)
+        total_points += min(coord_points, 5)
         
         # Code runs without errors (10 points)
         exec(code)
         total_points += 10
-        feedback.append("Code execution: 10/10 points")
         
         # Code efficiency and best practices (10 points)
-        efficiency_points = 10
-        if len(code.split('\n')) > 100: efficiency_points -= 2
-        if code.count('for') > 3: efficiency_points -= 2
-        total_points += efficiency_points
-        feedback.append(f"Code efficiency: {efficiency_points}/10 points")
-        
-    except Exception as e:
-        feedback.append(f"Error in code execution: {str(e)}")
+        # Check for basic code quality indicators
+        if (code.count('def') > 0 and  # Has functions
+            code.count('\n') > 5 and    # Multiple lines
+            not 'print' in code.lower()  # Uses proper output methods
+           ):
+            total_points += 10
+            
+    except Exception:
+        # If code fails to run, only award points for visible elements
+        pass
     
     # 2. Map Visualization (40 points)
-    try:
-        # Check for map generation (15 points)
-        if 'folium.Map' in code:
-            total_points += 15
-            feedback.append("Map generation: 15/15 points")
-        else:
-            feedback.append("Map generation: 0/15 points - Missing folium.Map")
+    if 'folium.Map' in code:
+        total_points += 15  # Correct map generation
         
-        # Check for markers (15 points)
-        marker_points = 0
-        if 'Marker' in code:
-            marker_count = code.count('Marker')
-            marker_points = min(15, marker_count * 5)
-        total_points += marker_points
-        feedback.append(f"Map markers: {marker_points}/15 points")
+    if 'folium.Marker' in code:
+        total_points += 15  # Points plotted
         
-        # Check for polylines (10 points)
-        if 'PolyLine' in code:
-            total_points += 10
-            feedback.append("Map connections: 10/10 points")
-        else:
-            feedback.append("Map connections: 0/10 points - Missing PolyLine")
-        
-    except Exception as e:
-        feedback.append(f"Error in map evaluation: {str(e)}")
+    if 'folium.PolyLine' in code:
+        total_points += 10  # Proper map lines
     
     # 3. Distance Calculations (30 points)
-    try:
-        # Check for geodesic implementation (10 points)
-        if 'geodesic' in code:
-            total_points += 10
-            feedback.append("Distance calculation method: 10/10 points")
-        else:
-            feedback.append("Distance calculation method: 0/10 points - Missing geodesic")
+    if 'geodesic' in code:
+        total_points += 10  # Correct implementation of geopy
         
-        # Check distance accuracy (20 points)
-        # This is a basic check - you might want to make it more sophisticated
-        distance_points = 0
-        for distance in CORRECT_DISTANCES.values():
-            if str(round(distance, 2)) in code:
-                distance_points += 6.67
-        total_points += distance_points
-        feedback.append(f"Distance accuracy: {distance_points:.2f}/20 points")
-        
-    except Exception as e:
-        feedback.append(f"Error in distance evaluation: {str(e)}")
+    # Check for correct distances (20 points)
+    expected_distances = [59.57, 73.14, 37.98]
+    for dist in expected_distances:
+        if str(round(dist, 2)) in code:
+            total_points += 6.67
     
-    return round(total_points), "\n".join(feedback)
+    return round(min(total_points, 100))
