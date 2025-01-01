@@ -1,65 +1,62 @@
 import streamlit as st
 
-def apply_style():
-    # Custom CSS for styling
-    st.markdown("""
-        <style>
-        /* Animated title */
-        @keyframes moveTitle {
-            0% { transform: translateX(-100%); }
-            50% { transform: translateX(10%); }
-            100% { transform: translateX(-100%); }
-        }
-        
-        .animate-title {
-            overflow: hidden;
-            white-space: nowrap;
-            margin-bottom: 2rem;
-        }
-        
-        .animate-title h1 {
-            color: #FF0000;
-            font-size: 3.5rem;
-            animation: moveTitle 10s linear infinite;
-            display: inline-block;
-        }
-        
-        /* Card styling */
-        .card {
-            background-color: #ffffff;
-            border-radius: 10px;
-            padding: 1rem;
-            margin: 0.5rem 0;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        
-        .card h3 {
-            color: #1E88E5;
-            margin: 0 0 0.5rem 0;
-        }
-        
-        .card p {
-            color: #666;
-            margin: 0;
-        }
-        
-        /* Button styling */
-        .stButton button {
-            width: 100%;
-            border-radius: 5px;
-            margin-top: 0.5rem;
-            background-color: #1E88E5;
-            color: white;
-        }
-        
-        .stButton button:hover {
-            background-color: #1565C0;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+def set_custom_style():
+    custom_css = """
+    <style>
+    @keyframes move {
+        0% { transform: translateX(0); }
+        50% { transform: translateX(20px); }
+        100% { transform: translateX(0); }
+    }
+    
+    .title {
+        font-size: 48px;
+        color: red;
+        text-align: center;
+        animation: move 2s infinite;
+        font-weight: bold;
+        margin-bottom: 30px;
+    }
+    
+    .card-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+    
+    .card {
+        background-color: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .tab-button {
+        width: 100%;
+        padding: 8px;
+        background-color: #f0f0f0;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    
+    .tab-button:hover {
+        background-color: #e0e0e0;
+    }
+    
+    .section-title {
+        font-size: 24px;
+        color: #333;
+        margin: 20px 0;
+        padding-left: 20px;
+    }
+    </style>
+    """
+    st.markdown(custom_css, unsafe_allow_html=True)
