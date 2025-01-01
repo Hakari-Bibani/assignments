@@ -1,7 +1,5 @@
 streamlit
 pandas
 numpy
-folium
-geopy
-streamlit-folium
-geopandas
+pathlib
+importlib
