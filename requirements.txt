@@ -2,6 +2,7 @@ streamlit
 pandas
 pathlib
 importlib
+importlib-metadata
 python-dateutil
 numpy
 plotly
