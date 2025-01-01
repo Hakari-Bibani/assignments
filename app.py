@@ -1,72 +1,69 @@
 import streamlit as st
 import pandas as pd
-from pathlib import Path
-import importlib
-import sys
+from style import set_page_style, create_card
 
-# Configure page settings
-st.set_page_config(page_title="ImpactHub", layout="wide")
+# Set page configuration
+st.set_page_config(
+    page_title="ImpactHub",
+    page_icon="📚",
+    layout="wide"
+)
 
-# Import custom style
-import style
+# Apply custom styling
+set_page_style()
 
-def main():
-    # Apply custom styles for the moving title
-    st.markdown(
-        """
-        <style>
-        @keyframes moveText {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        .moving-text {
-            color: red;
-            font-size: 48px;
-            font-weight: bold;
-            white-space: nowrap;
-            animation: moveText 15s linear infinite;
-            overflow: hidden;
-        }
-        </style>
-        <div class="moving-text">Welcome to ImpactHub</div>
-        """,
-        unsafe_allow_html=True
-    )
+# Display animated title
+st.markdown('<h1 class="main-title">ImpactHub</h1>', unsafe_allow_html=True)
+
+# Create two columns for Weeks and Quizzes
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown('<h2 class="section-header">Weekly Assignments</h2>', unsafe_allow_html=True)
+    st.markdown('<div class="grid-container">', unsafe_allow_html=True)
     
-    st.markdown("<br><br>", unsafe_allow_html=True)  # Add some spacing
+    # Generate cards for weeks
+    for week in range(1, 16):
+        card_html = create_card(
+            f"Week {week}",
+            f"Assignment and activities for Week {week}",
+            f"/week{week}"
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
     
-    # Create two columns for Weeks and Quizzes
-    col1, col2 = st.columns(2)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with col2:
+    st.markdown('<h2 class="section-header">Quizzes</h2>', unsafe_allow_html=True)
+    st.markdown('<div class="grid-container">', unsafe_allow_html=True)
     
-    # Weekly Assignments Section
+    # Generate cards for quizzes
+    for quiz in range(1, 11):
+        card_html = create_card(
+            f"Quiz {quiz}",
+            f"Assessment quiz for Module {quiz}",
+            f"/quiz{quiz}"
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Footer with grade information
+st.markdown("---")
+st.markdown("### Grade Information")
+
+try:
+    # Read the grades data
+    grades_df = pd.read_csv('grades/data_submission.csv')
+    
+    # Display basic statistics
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown("### Weekly Assignments")
-        for week in range(1, 16):
-            if st.button(f"Week {week}", key=f"week_{week}", 
-                        use_container_width=True,
-                        **style.button_style):
-                # Import and run the corresponding week's script
-                try:
-                    week_module = importlib.import_module(f'pages.week{week}')
-                    st.session_state.current_page = f'week{week}'
-                    st.experimental_rerun()
-                except ImportError as e:
-                    st.error(f"Error loading Week {week}: {str(e)}")
-    
-    # Quizzes Section
+        st.metric("Total Students", len(grades_df))
     with col2:
-        st.markdown("### Quizzes")
-        for quiz in range(1, 11):
-            if st.button(f"Quiz {quiz}", key=f"quiz_{quiz}", 
-                        use_container_width=True,
-                        **style.button_style):
-                # Import and run the corresponding quiz script
-                try:
-                    quiz_module = importlib.import_module(f'pages.quiz{quiz}')
-                    st.session_state.current_page = f'quiz{quiz}'
-                    st.experimental_rerun()
-                except ImportError as e:
-                    st.error(f"Error loading Quiz {quiz}: {str(e)}")
-
-if __name__ == "__main__":
-    main()
+        st.metric("Average Grade", f"{grades_df['Total'].mean():.2f}")
+    with col3:
+        st.metric("Submissions Today", len(grades_df[grades_df['Total'].notna()]))
+        
+except FileNotFoundError:
+    st.warning("No grade data available yet. Start submitting assignments to see statistics.")
