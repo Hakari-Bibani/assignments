@@ -8,3 +8,4 @@ seaborn
 openpyxl
 xlrd
 python-dotenv
+folium
