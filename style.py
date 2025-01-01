@@ -1,81 +1,63 @@
+# style.py
 import streamlit as st
 
-def set_page_style():
-    # Custom CSS styles
+def apply_style():
+    # Custom CSS
     st.markdown("""
         <style>
         /* Main container */
-        .stApp {
-            max-width: 1200px;
-            margin: 0 auto;
+        .main {
+            padding: 2rem;
         }
         
         /* Headers */
-        .main-header {
-            color: #1E88E5;
-            font-size: 2.5rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
-        }
-        
-        /* Cards */
-        div[data-testid="stHorizontalBlock"] > div {
-            background-color: #ffffff;
-            border-radius: 10px;
-            padding: 1rem;
-            margin: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
-        }
-        
-        div[data-testid="stHorizontalBlock"] > div:hover {
-            transform: translateY(-5px);
+        .css-10trblm {
+            color: #1a237e;
+            margin-bottom: 1rem;
         }
         
         /* Buttons */
-        .stButton button {
-            width: 100%;
-            border-radius: 5px;
-            background-color: #1E88E5;
+        .stButton > button {
+            background-color: #1a237e;
             color: white;
-            font-weight: 500;
+            border-radius: 4px;
             padding: 0.5rem 1rem;
             margin: 0.5rem 0;
-            transition: background-color 0.2s;
+            width: 100%;
+            transition: all 0.3s ease;
         }
         
-        .stButton button:hover {
-            background-color: #1565C0;
+        .stButton > button:hover {
+            background-color: #283593;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         
-        /* Form inputs */
-        .stTextInput input {
-            border-radius: 5px;
-            border: 1px solid #E0E0E0;
-            padding: 0.5rem;
+        /* Text inputs */
+        .stTextInput > div > div > input {
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
         }
         
-        .stTextArea textarea {
-            border-radius: 5px;
-            border: 1px solid #E0E0E0;
-            padding: 0.5rem;
+        /* Text areas */
+        .stTextArea > div > div > textarea {
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
         }
         
-        /* Success/Error messages */
-        .success-message {
-            background-color: #4CAF50;
-            color: white;
+        /* Success messages */
+        .success {
             padding: 1rem;
-            border-radius: 5px;
-            margin: 1rem 0;
+            border-radius: 4px;
+            background-color: #c8e6c9;
+            color: #2e7d32;
         }
         
-        .error-message {
-            background-color: #f44336;
-            color: white;
+        /* Error messages */
+        .error {
             padding: 1rem;
-            border-radius: 5px;
-            margin: 1rem 0;
+            border-radius: 4px;
+            background-color: #ffcdd2;
+            color: #c62828;
         }
         </style>
     """, unsafe_allow_html=True)
