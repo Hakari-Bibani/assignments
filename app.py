@@ -1,76 +1,84 @@
 import streamlit as st
-import base64
 from pathlib import Path
 import importlib
 import pandas as pd
-from style import apply_style
+import style
+from streamlit_card import card
 
-def load_module(module_name):
-    """Dynamically import a module"""
-    try:
-        return importlib.import_module(module_name)
-    except ImportError:
-        st.error(f"Could not load module: {module_name}")
-        return None
+# Configure page settings
+st.set_page_config(page_title="ImpactHub", layout="wide")
 
-def create_animated_text():
-    """Create animated text using HTML/CSS"""
-    st.markdown(
-        """
-        <style>
-        @keyframes slide {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        .animated-text {
-            color: red;
-            font-size: 48px;
-            font-weight: bold;
-            white-space: nowrap;
-            animation: slide 15s linear infinite;
-            overflow: hidden;
-        }
-        </style>
-        <div class="animated-text">ImpactHub</div>
-        """,
-        unsafe_allow_html=True
-    )
+# Apply custom styles
+style.apply_styles()
 
-def main():
-    # Apply custom styling
-    apply_style()
+# Initialize session state for navigation
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'home'
+
+# Title with animation
+st.markdown("""
+    <div class="moving-title">
+        <h1>ImpactHub</h1>
+    </div>
+""", unsafe_allow_html=True)
+
+# Sidebar navigation
+with st.sidebar:
+    st.title("Navigation")
     
-    # Display animated title
-    create_animated_text()
-    
+    # Weeks tab
+    st.header("Weeks")
+    for i in range(1, 16):
+        if st.button(f"Week {i}", key=f"week_{i}_sidebar"):
+            st.session_state.current_page = f'week{i}'
+            
+    # Quizzes tab
+    st.header("Quizzes")
+    for i in range(1, 11):
+        if st.button(f"Quiz {i}", key=f"quiz_{i}_sidebar"):
+            st.session_state.current_page = f'quiz{i}'
+
+# Main content area
+if st.session_state.current_page == 'home':
     # Create two columns for Weeks and Quizzes
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### Weeks")
-        weeks = [f"Week {i}" for i in range(1, 16)]
-        for week in weeks:
-            week_num = week.split()[1]
-            if st.button(week, key=f"week_{week_num}"):
-                week_module = load_module(f"pages.week{week_num}")
-                if week_module:
-                    st.session_state.current_page = f"week{week_num}"
+        st.header("Weeks")
+        for i in range(1, 16):
+            # Create clickable card for each week
+            clicked = card(
+                title=f"Week {i}",
+                text="Click to view assignments and submit work",
+                key=f"week_{i}_card"
+            )
+            if clicked:
+                st.session_state.current_page = f'week{i}'
+                st.experimental_rerun()
     
     with col2:
-        st.markdown("### Quizzes")
-        quizzes = [f"Quiz {i}" for i in range(1, 11)]
-        for quiz in quizzes:
-            quiz_num = quiz.split()[1]
-            if st.button(quiz, key=f"quiz_{quiz_num}"):
-                quiz_module = load_module(f"pages.quiz{quiz_num}")
-                if quiz_module:
-                    st.session_state.current_page = f"quiz{quiz_num}"
-    
-    # Load current page if set
-    if 'current_page' in st.session_state:
-        module = load_module(f"pages.{st.session_state.current_page}")
-        if module and hasattr(module, 'main'):
-            module.main()
+        st.header("Quizzes")
+        for i in range(1, 11):
+            # Create clickable card for each quiz
+            clicked = card(
+                title=f"Quiz {i}",
+                text="Click to take the quiz",
+                key=f"quiz_{i}_card"
+            )
+            if clicked:
+                st.session_state.current_page = f'quiz{i}'
+                st.experimental_rerun()
 
-if __name__ == "__main__":
-    main()
+else:
+    # Dynamic page loading
+    try:
+        if st.session_state.current_page.startswith('week'):
+            week_num = st.session_state.current_page[4:]
+            week_module = importlib.import_module(f'pages.week{week_num}')
+            week_module.show()
+        elif st.session_state.current_page.startswith('quiz'):
+            quiz_num = st.session_state.current_page[4:]
+            quiz_module = importlib.import_module(f'pages.quiz{quiz_num}')
+            quiz_module.show()
+    except Exception as e:
+        st.error(f"Error loading page: {str(e)}")
