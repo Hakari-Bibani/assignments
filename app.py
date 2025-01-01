@@ -1,78 +1,58 @@
 import streamlit as st
-import style
-from pathlib import Path
+from style import apply_custom_style
+import importlib
+import os
 
-# Configure page settings
+# Page configuration
 st.set_page_config(
     page_title="ImpactHub",
     page_icon="🎓",
     layout="wide"
 )
 
-# Apply custom styles
-style.apply_custom_styles()
+# Apply custom styling
+st.markdown(apply_custom_style(), unsafe_allow_html=True)
 
-# Create title with animation effect
-st.markdown(
-    """
-    <div class="marquee">
-        <h1>ImpactHub</h1>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Main title with animation
+st.markdown('<h1 class="main-title">ImpactHub</h1>', unsafe_allow_html=True)
 
-def create_card(title, description, week_num=None, is_quiz=False):
-    """Create a card with tabs for assignment and grading pages."""
-    card_html = f"""
-    <div class="card-container">
+def create_card(title, module_name):
+    with st.container():
+        st.markdown(f'''
         <div class="card">
             <h3>{title}</h3>
-            <p>{description}</p>
         </div>
-        <div class="tabs">
-            <div class="tab assignment-tab" onclick="window.location.href='{'quiz' if is_quiz else 'week'}{week_num}'">
-                {'Quiz' if is_quiz else 'Assignment'}
-            </div>
-            <div class="tab grade-tab" onclick="window.location.href='grade{week_num}'">
-                Grade
-            </div>
-        </div>
-    </div>
-    """
-    return st.markdown(card_html, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
+        if st.button(f"Start", key=f"start_{module_name}"):
+            try:
+                module = importlib.import_module(module_name)
+                return module
+            except ImportError:
+                st.error(f"Could not load module {module_name}")
+                return None
 
-def main():
-    # Create container for cards
-    st.markdown('<div class="grid-container">', unsafe_allow_html=True)
-    
-    # Assignments Section
-    st.markdown("<h2>Assignments</h2>", unsafe_allow_html=True)
-    cols = st.columns(5)  # 5 cards per row
-    
+# Create two columns for Weeks and Quizzes
+col1, col2 = st.columns(2)
+
+# Weeks section
+with col1:
+    st.markdown('<h2 class="section-title">Weekly Assignments</h2>', unsafe_allow_html=True)
+    st.markdown('<div class="card-container">', unsafe_allow_html=True)
     for week in range(1, 16):
-        with cols[(week-1) % 5]:
-            create_card(
-                f"Week {week}",
-                f"Assignment for Week {week}",
-                week_num=week,
-                is_quiz=False
-            )
-    
-    # Quizzes Section
-    st.markdown("<h2>Quizzes</h2>", unsafe_allow_html=True)
-    cols = st.columns(5)  # 5 cards per row
-    
-    for quiz in range(1, 11):
-        with cols[(quiz-1) % 5]:
-            create_card(
-                f"Quiz {quiz}",
-                f"Quiz {quiz} Assessment",
-                week_num=quiz,
-                is_quiz=True
-            )
-
+        create_card(f"Week {week}", f"week{week}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    main()
+# Quizzes section
+with col2:
+    st.markdown('<h2 class="section-title">Quizzes</h2>', unsafe_allow_html=True)
+    st.markdown('<div class="card-container">', unsafe_allow_html=True)
+    for quiz in range(1, 11):
+        create_card(f"Quiz {quiz}", f"quiz{quiz}")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Footer
+st.markdown("""
+<div style="text-align: center; margin-top: 50px; padding: 20px; background-color: #f0f2f6;">
+    <p>© 2025 ImpactHub. All rights reserved.</p>
+</div>
+""", unsafe_allow_html=True)
