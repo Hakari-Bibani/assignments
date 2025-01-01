@@ -1,165 +1,135 @@
 import streamlit as st
 import pandas as pd
-import importlib
 import os
-from pathlib import Path
-import sys
-from style import app_style
+from style import set_page_style
+import importlib
 
-# Setup page configuration
-st.set_page_config(
-    page_title="ImpactHub",
-    page_icon="📚",
-    layout="wide"
-)
+# Initialize the page
+st.set_page_config(page_title="ImpactHub", layout="wide")
+set_page_style()
 
-# Apply custom styling
-app_style()
+# Initialize session state
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'main'
 
-def load_module(module_name):
-    """Dynamically import a module."""
-    try:
-        return importlib.import_module(module_name)
-    except ImportError as e:
-        st.error(f"Error loading module {module_name}: {str(e)}")
-        return None
+# Function to load or create submission data
+def load_submission_data():
+    csv_path = 'grades/data_submission.csv'
+    if os.path.exists(csv_path):
+        return pd.read_csv(csv_path)
+    else:
+        # Create empty DataFrame with all required columns
+        columns = ['Name', 'Email', 'Student_ID', 'Total'] + \
+                 [f'Week_{i}' for i in range(1, 16)] + \
+                 [f'Quiz_{i}' for i in range(1, 11)]
+        df = pd.DataFrame(columns=columns)
+        os.makedirs('grades', exist_ok=True)
+        df.to_csv(csv_path, index=False)
+        return df
 
+# Function to save submission
 def save_submission(data):
-    """Save submission data to CSV file."""
-    csv_path = "grades/data_submission.csv"
-    
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-    
-    # Read existing data or create new DataFrame
-    try:
-        df = pd.read_csv(csv_path)
-    except FileNotFoundError:
-        df = pd.DataFrame()
-    
-    # Convert data to DataFrame and append
-    new_data = pd.DataFrame([data])
-    df = pd.concat([df, new_data], ignore_index=True)
-    
-    # Save to CSV
-    df.to_csv(csv_path, index=False)
+    df = load_submission_data()
+    df = pd.concat([df, pd.DataFrame([data])], ignore_index=True)
+    df.to_csv('grades/data_submission.csv', index=False)
 
-def calculate_total_grade(grades_dict):
-    """Calculate total grade from individual assignments."""
-    return sum(float(grade) for grade in grades_dict.values() if isinstance(grade, (int, float)))
+# Function to handle assignment submission
+def handle_submission(week_num=None, quiz_num=None):
+    name = st.session_state.get('name', '')
+    email = st.session_state.get('email', '')
+    student_id = st.session_state.get('student_id', '')
+    code = st.session_state.get('code', '')
+    
+    if not name or not email or not code:
+        st.error("Please fill in all required fields")
+        return
+    
+    submission_data = {
+        'Name': name,
+        'Email': email,
+        'Student_ID': student_id,
+    }
+    
+    # Import appropriate grading module
+    if week_num:
+        grade_module = importlib.import_module(f'grade{week_num}')
+        grade = grade_module.grade_assignment(code)
+        submission_data[f'Week_{week_num}'] = grade
+    elif quiz_num:
+        grade_module = importlib.import_module('gradequizes')
+        grade = grade_module.grade_quiz(quiz_num, code)
+        submission_data[f'Quiz_{quiz_num}'] = grade
+    
+    # Calculate total
+    submission_data['Total'] = grade  # You might want to modify this based on your grading scheme
+    
+    save_submission(submission_data)
+    st.success("Assignment submitted successfully!")
 
-def main():
-    st.title("ImpactHub Learning Platform")
+# Main page content
+def main_page():
+    st.title("ImpactHub - Assignment Portal")
     
-    # Sidebar for navigation
-    st.sidebar.title("Navigation")
-    pages = ["Main Page", "Week Assignments", "Quizzes"]
-    selection = st.sidebar.radio("Go to", pages)
+    # Create grid layout for cards
+    col1, col2, col3 = st.columns(3)
     
-    if selection == "Main Page":
-        st.header("Welcome to ImpactHub!")
-        
-        # Create columns for better layout
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Weekly Assignments")
-            for week in range(1, 16):
-                if st.button(f"Week {week}", key=f"week_{week}"):
-                    st.session_state.page = f"week{week}"
-                    st.session_state.current_week = week
-                    st.experimental_rerun()
-        
-        with col2:
-            st.subheader("Quizzes")
-            for quiz in range(1, 11):
-                if st.button(f"Quiz {quiz}", key=f"quiz_{quiz}"):
-                    st.session_state.page = f"quiz{quiz}"
-                    st.session_state.current_quiz = quiz
-                    st.experimental_rerun()
+    # Weeks
+    for i in range(1, 16):
+        with col1 if i % 3 == 1 else col2 if i % 3 == 2 else col3:
+            if st.button(f"Week {i}", key=f"week_{i}", use_container_width=True):
+                st.session_state.current_page = f'week_{i}'
+                st.rerun()
     
-    elif selection in ["Week Assignments", "Quizzes"]:
-        # Student Information Form
-        st.header("Student Information")
-        name = st.text_input("Full Name", key="name")
-        email = st.text_input("Email", key="email")
-        student_id = st.text_input("Student ID (Optional)", key="student_id")
-        
-        if selection == "Week Assignments" and "current_week" in st.session_state:
-            week_num = st.session_state.current_week
-            week_module = load_module(f"week{week_num}")
-            grade_module = load_module(f"grade{week_num}")
-            
-            if week_module and grade_module:
-                st.header(f"Week {week_num} Assignment")
-                
-                # Display assignment description
-                st.markdown(week_module.get_description())
-                
-                # Code submission
-                code = st.text_area("Enter your code here:", height=300)
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    if st.button("Run Code"):
-                        try:
-                            # Execute code in a safe environment
-                            exec(code)
-                        except Exception as e:
-                            st.error(f"Error executing code: {str(e)}")
-                
-                with col2:
-                    if st.button("Submit Assignment"):
-                        if not name or not email:
-                            st.error("Please fill in required fields (Name and Email)")
-                        else:
-                            # Grade the submission
-                            grade = grade_module.grade_assignment(code)
-                            
-                            # Prepare submission data
-                            submission_data = {
-                                "Name": name,
-                                "Email": email,
-                                "Student_ID": student_id,
-                                f"Week_{week_num}": grade
-                            }
-                            
-                            # Save submission
-                            save_submission(submission_data)
-                            st.success(f"Assignment submitted! Grade: {grade}")
-        
-        elif selection == "Quizzes" and "current_quiz" in st.session_state:
-            quiz_num = st.session_state.current_quiz
-            quiz_module = load_module(f"quiz{quiz_num}")
-            grade_module = load_module("gradequizes")
-            
-            if quiz_module and grade_module:
-                st.header(f"Quiz {quiz_num}")
-                
-                # Display quiz questions and handle submissions
-                answers = quiz_module.display_quiz()
-                
-                if st.button("Submit Quiz"):
-                    if not name or not email:
-                        st.error("Please fill in required fields (Name and Email)")
-                    else:
-                        # Grade the quiz
-                        grade = grade_module.grade_quiz(quiz_num, answers)
-                        
-                        # Prepare submission data
-                        submission_data = {
-                            "Name": name,
-                            "Email": email,
-                            "Student_ID": student_id,
-                            f"Quiz_{quiz_num}": grade
-                        }
-                        
-                        # Save submission
-                        save_submission(submission_data)
-                        st.success(f"Quiz submitted! Grade: {grade}")
+    st.markdown("---")
+    
+    # Quizzes
+    for i in range(1, 11):
+        with col1 if i % 3 == 1 else col2 if i % 3 == 2 else col3:
+            if st.button(f"Quiz {i}", key=f"quiz_{i}", use_container_width=True):
+                st.session_state.current_page = f'quiz_{i}'
+                st.rerun()
 
-if __name__ == "__main__":
-    if 'page' not in st.session_state:
-        st.session_state.page = "main"
-    main()
+# Assignment/Quiz page content
+def assignment_page(week_num=None, quiz_num=None):
+    page_type = "Quiz" if quiz_num else "Week"
+    num = quiz_num if quiz_num else week_num
+    
+    st.title(f"{page_type} {num}")
+    
+    # Back button
+    if st.button("← Back to Main Page"):
+        st.session_state.current_page = 'main'
+        st.rerun()
+    
+    # Student information
+    st.subheader("Student Information")
+    st.text_input("Name *", key="name")
+    st.text_input("Email *", key="email")
+    st.text_input("Student ID", key="student_id")
+    
+    # Assignment content
+    st.subheader("Assignment Details")
+    if quiz_num:
+        quiz_module = importlib.import_module(f'quiz{quiz_num}')
+        st.markdown(quiz_module.get_description())
+    else:
+        week_module = importlib.import_module(f'week{week_num}')
+        st.markdown(week_module.get_description())
+    
+    # Code submission
+    st.subheader("Code Submission")
+    st.text_area("Enter your code here *", height=300, key="code")
+    
+    # Submit button
+    if st.button("Submit Assignment"):
+        handle_submission(week_num, quiz_num)
+
+# Main app logic
+if st.session_state.current_page == 'main':
+    main_page()
+else:
+    page_type, num = st.session_state.current_page.split('_')
+    if page_type == 'week':
+        assignment_page(week_num=int(num))
+    else:
+        assignment_page(quiz_num=int(num))
