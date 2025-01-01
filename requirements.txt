@@ -1,14 +1,5 @@
 streamlit
 pandas
-numpy
-plotly
-matplotlib
-seaborn
-scikit-learn
-pytest
-xlrd
-openpyxl
-python-dotenv
-requests
-beautifulsoup4
-pillow
+pathlib
+importlib
+python-dateutil
