@@ -1,33 +1,28 @@
 import streamlit as st
-from streamlit.components.v1 import html
 
-# Title with animation
-st.markdown("<h1 style='color: red; animation: marquee 10s linear infinite;'>ImpactHub</h1>", unsafe_allow_html=True)
+# Import custom styles
+from style import apply_card_style, set_page_theme
 
-# CSS for animation
-st.markdown("""
-<style>
-@keyframes marquee {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-}
-h1 {
-  display: inline-block;
-  white-space: nowrap;
-  overflow: hidden;
-}
-</style>
-""", unsafe_allow_html=True)
+# Set the page theme
+set_page_theme()
 
-# Display cards for Weeks and Quizzes
-st.sidebar.title("Navigation")
-weeks = [f"Week {i}" for i in range(1, 16)]
-quizzes = [f"Quiz {i}" for i in range(1, 11)]
+# Main page layout
+st.title("Course Management Platform")
 
-for week in weeks:
-    if st.sidebar.button(week):
-        st.experimental_rerun()
+# Display cards for Assignments and Quizzes
+st.header("Assignments")
+for week in range(1, 16):
+    if st.button(f"Week {week}"):
+        st.experimental_set_query_params(page=f"week{week}")
 
-for quiz in quizzes:
-    if st.sidebar.button(quiz):
-        st.experimental_rerun()
+st.header("Quizzes")
+for quiz in range(1, 11):
+    if st.button(f"Quiz {quiz}"):
+        st.experimental_set_query_params(page=f"quiz{quiz}")
+
+# Handle navigation
+query_params = st.experimental_get_query_params()
+if "page" in query_params:
+    page = query_params["page"][0]
+    st.write(f"Navigating to {page}.py")
+    # Here you would include logic to load the respective page content
