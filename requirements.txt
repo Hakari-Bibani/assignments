@@ -1,3 +1,6 @@
 streamlit
 pandas
 Pillow
+folium==0.14.0
+geopy==2.4.0
+streamlit-folium==0.15.0
