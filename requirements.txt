@@ -1,3 +1,6 @@
 streamlit
 pandas
-numpy
+pillow
+streamlit-card
+streamlit-option-menu
+hydralit_components
