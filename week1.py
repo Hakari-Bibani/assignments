@@ -1,64 +1,99 @@
 import streamlit as st
+import folium
+from geopy.distance import geodesic
 import pandas as pd
-from pathlib import Path
+from streamlit_folium import folium_static
+import os
 
 def run():
-    st.title("Week 1: Introduction to Python")
+    st.title("Week 1 Assignment: Mapping Coordinates and Calculating Distances")
     
-    # Student information
+    # Student Information Section
     st.subheader("Student Information")
-    student_name = st.text_input("Name")
+    name = st.text_input("Name")
+    email = st.text_input("Email")
     student_id = st.text_input("Student ID")
     
-    # Assignment questions
-    st.subheader("Assignment Questions")
+    # Assignment Details in Accordion
+    with st.expander("Assignment Details", expanded=True):
+        st.markdown("""
+        ## Assignment: Week 1 – Mapping Coordinates and Calculating Distances in Python
+        
+        ### Objective
+        Write a Python script to plot three geographical coordinates on a map and calculate 
+        the distance between each pair of points in kilometers.
+        
+        ### Task Requirements
+        1. **Plot the Three Coordinates on a Map:**
+           - Plot three locations in the Kurdistan Region
+           - Use Python libraries to visualize the points
+           
+        2. **Calculate the Distance Between Each Pair of Points:**
+           - Calculate distances in kilometers between:
+             - Point 1 and Point 2
+             - Point 2 and Point 3
+             - Point 1 and Point 3
+        
+        ### Coordinates:
+        - **Point 1:** Latitude: 36.325735, Longitude: 43.928414
+        - **Point 2:** Latitude: 36.393432, Longitude: 44.586781
+        - **Point 3:** Latitude: 36.660477, Longitude: 43.840174
+        
+        ### Required Libraries:
+        - geopy for distance calculations
+        - folium for map visualization
+        - geopandas (optional)
+        """)
     
-    # Question 1
-    st.markdown("#### Question 1")
-    st.write("What is Python's primary use case?")
-    q1_answer = st.text_area("Your Answer", key="q1")
+    # Code Submission Section
+    st.subheader("Code Submission")
+    code = st.text_area("Paste your code here:", height=300)
     
-    # Question 2
-    st.markdown("#### Question 2")
-    st.write("Write a Python function that prints 'Hello, World!'")
-    q2_answer = st.text_area("Your Answer", key="q2")
+    # Run Code Button
+    if st.button("Run Code"):
+        if code.strip():
+            try:
+                # Create a temporary Python file with the submitted code
+                with open("temp_submission.py", "w") as f:
+                    f.write(code)
+                
+                # Execute the code and capture output
+                exec(code, globals())
+                
+                st.success("Code executed successfully!")
+                
+            except Exception as e:
+                st.error(f"Error executing code: {str(e)}")
+        else:
+            st.warning("Please enter code before running.")
     
-    # Submit button
+    # Submit Assignment Button
     if st.button("Submit Assignment"):
-        if not student_name or not student_id:
-            st.error("Please fill in your name and student ID")
+        if not all([name, email, student_id, code]):
+            st.error("Please fill in all fields before submitting.")
             return
             
-        # Save submission
-        submission = {
-            'student_name': student_name,
+        # Save submission to CSV
+        submission_data = {
+            'name': name,
             'student_id': student_id,
-            'q1_answer': q1_answer,
-            'q2_answer': q2_answer,
+            'email': email,
             'week': 1,
-            'timestamp': pd.Timestamp.now()
+            'code': code,
+            'total': 0  # Will be updated by grading script
         }
         
-        # Save to CSV
-        save_submission(submission)
+        # Create grades directory if it doesn't exist
+        os.makedirs('grades', exist_ok=True)
         
-        # Run grading
+        # Save or append to CSV
+        df = pd.DataFrame([submission_data])
+        if os.path.exists('grades/data_submission.csv'):
+            df.to_csv('grades/data_submission.csv', mode='a', header=False, index=False)
+        else:
+            df.to_csv('grades/data_submission.csv', index=False)
+        
+        # Run grading script
         import grade1
-        grade1.grade_submission(submission)
-        
-        st.success("Assignment submitted successfully!")
-
-def save_submission(submission):
-    # Create grades directory if it doesn't exist
-    Path('grades').mkdir(exist_ok=True)
-    
-    # Create or load existing submissions
-    csv_path = 'grades/data_submission.csv'
-    try:
-        df = pd.read_csv(csv_path)
-    except FileNotFoundError:
-        df = pd.DataFrame()
-    
-    # Append new submission
-    new_df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
-    new_df.to_csv(csv_path, index=False)
+        grade = grade1.grade()
+        st.success(f"Assignment submitted successfully! Grade: {grade}/100")
