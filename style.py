@@ -26,7 +26,7 @@ styles = """
     width: 300px;
     height: 200px;
     perspective: 1000px;
-    margin: 20px 0;
+    margin: 20px auto;
 }
 
 .flip-card-inner {
@@ -51,6 +51,8 @@ styles = """
     align-items: center;
     justify-content: center;
     flex-direction: column;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .flip-card-front {
@@ -77,6 +79,12 @@ button {
 
 button:hover {
     background-color: #e0e0e0;
+}
+
+h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
 }
 </style>
 """
