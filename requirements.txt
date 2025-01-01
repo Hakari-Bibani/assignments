@@ -1,7 +1,10 @@
 streamlit
 pandas
 numpy
-plotly
 pillow
-streamlit-card
-streamlit-option-menu
+plotly
+matplotlib
+seaborn
+openpyxl
+xlrd
+python-dotenv
