@@ -1,126 +1,144 @@
 import ast
-import inspect
-from geopy.distance import geodesic
+import re
 
-def check_imports(code_str):
-    """Check if required libraries are imported"""
+def check_imports(code):
+    """Check if required libraries are properly imported"""
+    required_libs = ['geopy', 'folium']
+    score = 0
+    feedback = []
+    
     try:
-        tree = ast.parse(code_str)
+        tree = ast.parse(code)
         imports = []
+        
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
-                imports.extend(n.name for n in node.names)
+                imports.extend(name.name.split('.')[0] for name in node.names)
             elif isinstance(node, ast.ImportFrom):
-                imports.append(node.module)
+                imports.append(node.module.split('.')[0])
         
-        required_libs = {'geopy', 'folium'}
-        found_libs = set(imports)
+        for lib in required_libs:
+            if lib in imports:
+                score += 2.5
+                feedback.append(f"✓ {lib} correctly imported")
+            else:
+                feedback.append(f"✗ Missing {lib} import")
+                
+    except SyntaxError:
+        feedback.append("✗ Syntax error in imports")
+        return 0, feedback
         
-        return len(required_libs.intersection(found_libs)) * 2.5  # 5 points total
-    except:
-        return 0
+    return score, feedback
 
-def check_coordinates(code_str):
-    """Check if coordinates are correctly specified"""
-    correct_coords = [
+def check_coordinates(code):
+    """Check if coordinates are correctly used"""
+    coordinates = [
         (36.325735, 43.928414),
         (36.393432, 44.586781),
         (36.660477, 43.840174)
     ]
     
-    try:
-        tree = ast.parse(code_str)
-        found_coords = []
-        
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Tuple):
-                if len(node.elts) == 2:
-                    try:
-                        lat = float(node.elts[0].value)
-                        lon = float(node.elts[1].value)
-                        found_coords.append((lat, lon))
-                    except:
-                        continue
-        
-        points = 0
-        for coord in correct_coords:
-            if any(abs(c[0] - coord[0]) < 0.0001 and abs(c[1] - coord[1]) < 0.0001 
-                  for c in found_coords):
-                points += 1.67
-        
-        return points  # 5 points total
-    except:
-        return 0
+    score = 0
+    feedback = []
+    
+    for lat, lon in coordinates:
+        if str(lat) in code and str(lon) in code:
+            score += 1.67
+            feedback.append(f"✓ Found coordinates ({lat}, {lon})")
+        else:
+            feedback.append(f"✗ Missing coordinates ({lat}, {lon})")
+            
+    return score, feedback
 
-def check_distance_calculations(code_str):
-    """Check if distances are calculated correctly"""
-    correct_distances = {
-        (0, 1): 59.57,  # Point 1 to Point 2
-        (1, 2): 73.14,  # Point 2 to Point 3
-        (0, 2): 37.98   # Point 1 to Point 3
+def check_map_visualization(code):
+    """Check map visualization implementation"""
+    score = 0
+    feedback = []
+    
+    # Check for folium map creation
+    if "folium.Map" in code:
+        score += 15
+        feedback.append("✓ Folium map correctly initialized")
+    else:
+        feedback.append("✗ Missing folium map initialization")
+    
+    # Check for markers
+    if "folium.Marker" in code:
+        score += 15
+        feedback.append("✓ Markers implemented correctly")
+    else:
+        feedback.append("✗ Missing markers implementation")
+    
+    # Check for polylines
+    if "folium.PolyLine" in code or "folium.polyline" in code:
+        score += 10
+        feedback.append("✓ Polylines implemented correctly")
+    else:
+        feedback.append("✗ Missing polylines implementation")
+    
+    return score, feedback
+
+def check_distance_calculations(code):
+    """Check distance calculations implementation"""
+    score = 0
+    feedback = []
+    
+    expected_distances = {
+        "Point 1 to Point 2": 59.57,
+        "Point 2 to Point 3": 73.14,
+        "Point 1 to Point 3": 37.98
     }
     
-    try:
-        # Execute code in controlled environment
-        locals_dict = {}
-        exec(code_str, {'geodesic': geodesic}, locals_dict)
-        
-        # Look for values close to correct distances
-        points = 0
-        for values in locals_dict.values():
-            if isinstance(values, (int, float)):
-                for correct_dist in correct_distances.values():
-                    if abs(values - correct_dist) < 0.1:
-                        points += 6.67  # 20 points total / 3 distances
-        
-        return min(points, 20)
-    except:
-        return 0
+    # Check for geodesic usage
+    if "geodesic" in code:
+        score += 10
+        feedback.append("✓ Geodesic distance calculation implemented")
+    else:
+        feedback.append("✗ Missing geodesic distance calculation")
+    
+    # Look for distance values in the code
+    for description, expected in expected_distances.items():
+        # Look for numbers that are close to the expected value
+        pattern = f"{expected:.2f}|{expected:.1f}|{expected:.0f}"
+        if re.search(pattern, code):
+            score += 6.67
+            feedback.append(f"✓ Correct distance calculation for {description}")
+        else:
+            feedback.append(f"✗ Incorrect or missing distance calculation for {description}")
+    
+    return score, feedback
 
-def check_map_visualization(code_str):
-    """Check map visualization implementation"""
-    try:
-        tree = ast.parse(code_str)
-        points = 0
-        
-        # Check for folium.Map creation
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                if hasattr(node.func, 'attr') and node.func.attr == 'Map':
-                    points += 15
-                elif hasattr(node.func, 'attr') and node.func.attr == 'Marker':
-                    points += 5  # Up to 15 points for markers
-                elif hasattr(node.func, 'attr') and node.func.attr == 'PolyLine':
-                    points += 10
-        
-        return min(points, 40)  # Cap at 40 points
-    except:
-        return 0
-
-def grade_assignment(code_str):
+def grade_submission(code):
     """Main grading function"""
-    total = 0
+    total_score = 0
+    all_feedback = []
     
     # Code Structure and Implementation (30 points)
-    total += check_imports(code_str)  # 5 points
-    total += check_coordinates(code_str)  # 5 points
+    import_score, import_feedback = check_imports(code)
+    coord_score, coord_feedback = check_coordinates(code)
     
-    try:
-        exec(code_str)
-        total += 10  # Code runs without errors
-    except:
-        pass
-    
-    # Code efficiency (simple check - could be improved)
-    if len(code_str.split('\n')) < 50:
-        total += 10
-    elif len(code_str.split('\n')) < 100:
-        total += 5
+    # Run without errors worth 10 points - checked in week1.py during execution
+    code_structure_score = import_score + coord_score
+    if code_structure_score > 30:
+        code_structure_score = 30
+        
+    all_feedback.extend(["### Code Structure and Implementation ###"])
+    all_feedback.extend(import_feedback)
+    all_feedback.extend(coord_feedback)
     
     # Map Visualization (40 points)
-    total += check_map_visualization(code_str)
+    map_score, map_feedback = check_map_visualization(code)
+    all_feedback.extend(["\n### Map Visualization ###"])
+    all_feedback.extend(map_feedback)
     
     # Distance Calculations (30 points)
-    total += check_distance_calculations(code_str)
+    dist_score, dist_feedback = check_distance_calculations(code)
+    all_feedback.extend(["\n### Distance Calculations ###"])
+    all_feedback.extend(dist_feedback)
     
-    return min(round(total), 100)  # Ensure total doesn't exceed 100
+    total_score = code_structure_score + map_score + dist_score
+    
+    # Round to 2 decimal places
+    total_score = round(total_score, 2)
+    
+    return total_score, "\n".join(all_feedback)
