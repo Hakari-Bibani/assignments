@@ -6,6 +6,7 @@ import io
 import contextlib
 import ast
 import inspect
+import folium
 
 # Helper functions
 def load_or_create_grades_file():
@@ -19,8 +20,6 @@ def load_or_create_grades_file():
 def save_grade(name, student_id, total_grade):
     grades_file = load_or_create_grades_file()
     df = pd.read_csv(grades_file)
-    
-    # Update or append new grade
     if ((df['name'] == name) & (df['student_id'] == student_id)).any():
         df.loc[(df['name'] == name) & (df['student_id'] == student_id), 'week1'] = total_grade
         df.loc[(df['name'] == name) & (df['student_id'] == student_id), 'total'] = total_grade
@@ -32,8 +31,14 @@ def save_grade(name, student_id, total_grade):
             'week1': [total_grade]
         })
         df = pd.concat([df, new_row], ignore_index=True)
-    
     df.to_csv(grades_file, index=False)
+
+def extract_folium_map(namespace):
+    """Extract Folium map object from namespace if it exists"""
+    for obj in namespace.values():
+        if isinstance(obj, folium.Map):
+            return obj
+    return None
 
 def run():
     # Main page content
@@ -69,17 +74,28 @@ def run():
     code = st.text_area("Paste your code here", height=300)
 
     col1, col2 = st.columns(2)
-    
+
     # Run Code Button
     if col1.button("Run Code"):
         if code.strip():
-            # Capture output
             output = io.StringIO()
+            namespace = {}
             with contextlib.redirect_stdout(output):
                 try:
-                    exec(code)
+                    exec(code, namespace)
                     st.success("Code executed successfully!")
-                    st.write(output.getvalue())
+                    
+                    # Extract and display Folium map if present
+                    folium_map = extract_folium_map(namespace)
+                    if folium_map:
+                        st.components.html(folium_map._repr_html_(), height=500)
+                    
+                    # Display any print outputs
+                    output_text = output.getvalue()
+                    if output_text.strip():
+                        st.write("Output:")
+                        st.write(output_text)
+                        
                 except Exception as e:
                     st.error(f"Error executing code: {str(e)}")
         else:
@@ -91,8 +107,9 @@ def run():
             st.error("Please fill in all fields before submitting")
         else:
             try:
-                # Import grading function here to avoid circular imports
+                # Import grading function
                 from grade1 import grade_assignment
+                
                 # Grade the submission
                 total_grade = grade_assignment(code)
                 
