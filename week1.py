@@ -6,8 +6,8 @@ import io
 import contextlib
 import ast
 import inspect
-from grade1 import grade_assignment
 
+# Helper functions
 def load_or_create_grades_file():
     grades_file = Path("grades/data_submission.csv")
     grades_file.parent.mkdir(exist_ok=True)
@@ -35,15 +35,16 @@ def save_grade(name, student_id, total_grade):
     
     df.to_csv(grades_file, index=False)
 
-def main():
+def run():
+    # Main page content
     st.title("Week 1 Assignment: Mapping Coordinates and Calculating Distances")
-    
+
     # Student Information
     st.header("Student Information")
     name = st.text_input("Name")
     email = st.text_input("Email")
     student_id = st.text_input("Student ID")
-    
+
     # Assignment Details in Accordion
     with st.expander("Assignment Details", expanded=True):
         st.markdown("""
@@ -62,13 +63,15 @@ def main():
         1. Plot all three points on an interactive map
         2. Calculate distances between each pair of points in kilometers
         """)
-    
+
     # Code Submission
     st.header("Code Submission")
     code = st.text_area("Paste your code here", height=300)
+
+    col1, col2 = st.columns(2)
     
     # Run Code Button
-    if st.button("Run Code"):
+    if col1.button("Run Code"):
         if code.strip():
             # Capture output
             output = io.StringIO()
@@ -81,13 +84,15 @@ def main():
                     st.error(f"Error executing code: {str(e)}")
         else:
             st.warning("Please enter code before running")
-    
+
     # Submit Assignment Button
-    if st.button("Submit Assignment"):
+    if col2.button("Submit Assignment"):
         if not all([name, email, student_id, code]):
             st.error("Please fill in all fields before submitting")
         else:
             try:
+                # Import grading function here to avoid circular imports
+                from grade1 import grade_assignment
                 # Grade the submission
                 total_grade = grade_assignment(code)
                 
@@ -99,4 +104,4 @@ def main():
                 st.error(f"Error during submission: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    run()
