@@ -1,8 +1,5 @@
 streamlit
 pandas
-folium
-geopy
-geopandas
 numpy
-ast
-plotly
+pathlib
+importlib-metadata
