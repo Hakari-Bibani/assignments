@@ -79,23 +79,28 @@ def run():
     # Run Code Button
     if col1.button("Run Code"):
         if code.strip():
-            output = io.StringIO()
+            # Create a temporary file to save the map
+            temp_html = "temp_map.html"
             namespace = {}
-            with contextlib.redirect_stdout(output):
-                try:
-                    exec(code, namespace)
-                    st.success("Code executed successfully!")
-                    
-                    # Extract and display Folium map if present
-                    folium_map = extract_folium_map(namespace)
-                    if folium_map:
-                        html(folium_map._repr_html_(), height=500)
-                    
-                    # Display any print outputs
-                    output_text = output.getvalue()
-                    if output_text.strip():
-                        st.write("Output:")
-                        st.write(output_text)
+            try:
+                # Add display function to namespace
+                namespace['display'] = lambda x: None  # Mock display function
+                
+                # Execute student code
+                exec(code, namespace)
+                st.success("Code executed successfully!")
+                
+                # Find and save the map
+                folium_map = extract_folium_map(namespace)
+                if folium_map:
+                    folium_map.save(temp_html)
+                    with open(temp_html, 'r', encoding='utf-8') as f:
+                        html_content = f.read()
+                    html(html_content, height=500)
+                    # Clean up
+                    import os
+                    if os.path.exists(temp_html):
+                        os.remove(temp_html)
                         
                 except Exception as e:
                     st.error(f"Error executing code: {str(e)}")
