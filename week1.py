@@ -91,11 +91,14 @@ def run():
                     if folium_map:
                         html(folium_map._repr_html_(), height=500)
                     
-                    # Display any print outputs
+                    # Display any print outputs, filtering out folium and IPython objects
                     output_text = output.getvalue()
-                    if output_text.strip():
+                    filtered_lines = [line for line in output_text.split('\n') 
+                                    if not ('<folium' in line or '<IPython' in line)
+                                    and line.strip()]
+                    if filtered_lines:
                         st.write("Output:")
-                        st.write(output_text)
+                        st.write('\n'.join(filtered_lines))
                         
                 except Exception as e:
                     st.error(f"Error executing code: {str(e)}")
