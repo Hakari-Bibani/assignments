@@ -91,10 +91,13 @@ def run():
                     if folium_map:
                         html(folium_map._repr_html_(), height=500)
                     
-                    # Display any print outputs, filtering out folium and IPython objects
+                    # Display any print outputs, filtering out folium, IPython objects and text summaries
                     output_text = output.getvalue()
                     filtered_lines = [line for line in output_text.split('\n') 
-                                    if not ('<folium' in line or '<IPython' in line)
+                                    if not ('<folium' in line or 
+                                          '<IPython' in line or 
+                                          '**text summary**' in line or 
+                                          '**distance report**' in line)
                                     and line.strip()]
                     if filtered_lines:
                         st.write("Output:")
