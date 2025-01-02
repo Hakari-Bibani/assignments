@@ -3,3 +3,5 @@ pandas
 numpy
 pathlib
 importlib-metadata
+geopy
+folium
