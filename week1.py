@@ -1,131 +1,134 @@
 import streamlit as st
-from streamlit.components.v1 import html
+import os
 import pandas as pd
-from pathlib import Path
-import sys
-import io
-import contextlib
+from grade1 import grade_submission
 import ast
-import inspect
-import folium
+import sys
+from io import StringIO
+import traceback
 
-# Helper functions
-def load_or_create_grades_file():
-    grades_file = Path("grades/data_submission.csv")
-    grades_file.parent.mkdir(exist_ok=True)
-    if not grades_file.exists():
-        df = pd.DataFrame(columns=['name', 'student_id', 'total', 'week1'])
-        df.to_csv(grades_file, index=False)
-    return grades_file
+# Set page config
+st.set_page_config(page_title="Week 1 - Mapping Coordinates Assignment", layout="wide")
 
-def save_grade(name, student_id, total_grade):
-    grades_file = load_or_create_grades_file()
-    df = pd.read_csv(grades_file)
-    if ((df['name'] == name) & (df['student_id'] == student_id)).any():
-        df.loc[(df['name'] == name) & (df['student_id'] == student_id), 'week1'] = total_grade
-        df.loc[(df['name'] == name) & (df['student_id'] == student_id), 'total'] = total_grade
+def create_directory_if_not_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+# Create grades directory if it doesn't exist
+create_directory_if_not_exists("grades")
+
+def save_submission(name, student_id, total_grade, week_num=1):
+    """Save submission details to CSV"""
+    filename = "grades/data_submission.csv"
+    data = {
+        'name': [name],
+        'student_id': [student_id],
+        'total': [total_grade],
+        f'week{week_num}': [total_grade]
+    }
+    
+    new_df = pd.DataFrame(data)
+    
+    if os.path.exists(filename):
+        df = pd.read_csv(filename)
+        # Update if student already exists, otherwise append
+        if ((df['name'] == name) & (df['student_id'] == student_id)).any():
+            idx = df[(df['name'] == name) & (df['student_id'] == student_id)].index
+            df.loc[idx, ['total', f'week{week_num}']] = total_grade
+        else:
+            df = pd.concat([df, new_df], ignore_index=True)
     else:
-        new_row = pd.DataFrame({
-            'name': [name],
-            'student_id': [student_id],
-            'total': [total_grade],
-            'week1': [total_grade]
-        })
-        df = pd.concat([df, new_row], ignore_index=True)
-    df.to_csv(grades_file, index=False)
+        df = new_df
+        
+    df.to_csv(filename, index=False)
 
-def extract_folium_map(namespace):
-    """Extract Folium map object from namespace if it exists"""
-    for obj in namespace.values():
-        if isinstance(obj, folium.Map):
-            return obj
-    return None
+def run_student_code(code_string):
+    """Execute student code and capture output"""
+    old_stdout = sys.stdout
+    redirected_output = sys.stdout = StringIO()
+    
+    try:
+        exec(code_string)
+        sys.stdout = old_stdout
+        return redirected_output.getvalue(), None
+    except Exception as e:
+        sys.stdout = old_stdout
+        return None, str(e)
 
-def run():
-    # Main page content
-    st.title("Week 1 Assignment: Mapping Coordinates and Calculating Distances")
-
-    # Student Information
-    st.header("Student Information")
-    name = st.text_input("Name")
-    email = st.text_input("Email")
-    student_id = st.text_input("Student ID")
-
+def main():
+    st.title("Week 1 - Mapping Coordinates and Distance Calculation")
+    
     # Assignment Details in Accordion
     with st.expander("Assignment Details", expanded=True):
         st.markdown("""
-        **Objective:** Create a Python script to plot three geographical coordinates on a map and calculate distances between points.
+        ### Objective
+        Write a Python script to plot three geographical coordinates on a map and calculate the distance between each pair of points in kilometers.
         
-        **Required Libraries:**
-        - geopy for distance calculations
-        - folium for mapping
+        ### Task Requirements
+        1. **Plot the Three Coordinates on a Map:**
+           - Plot coordinates representing three locations in the Kurdistan Region
+           - Use Python libraries to display these points on a map
+           - Show exact locations of the coordinates
+           
+        2. **Calculate the Distance Between Each Pair of Points:**
+           - Calculate distances between the three points in kilometers
+           - Required calculations:
+             - Distance between Point 1 and Point 2
+             - Distance between Point 2 and Point 3
+             - Distance between Point 1 and Point 3
         
-        **Coordinates:**
-        - Point 1: (36.325735, 43.928414)
-        - Point 2: (36.393432, 44.586781)
-        - Point 3: (36.660477, 43.840174)
+        ### Coordinates
+        - **Point 1:** Latitude: 36.325735, Longitude: 43.928414
+        - **Point 2:** Latitude: 36.393432, Longitude: 44.586781
+        - **Point 3:** Latitude: 36.660477, Longitude: 43.840174
         
-        **Requirements:**
-        1. Plot all three points on an interactive map
-        2. Calculate distances between each pair of points in kilometers
+        ### Required Libraries
+        - **geopy** for distance calculations
+        - **folium** for interactive map plotting
+        - **geopandas** (optional) for advanced mapping
         """)
 
+    # Student Information
+    col1, col2 = st.columns(2)
+    with col1:
+        student_name = st.text_input("Full Name")
+    with col2:
+        student_id = st.text_input("Student ID")
+
     # Code Submission
-    st.header("Code Submission")
-    code = st.text_area("Paste your code here", height=300)
+    st.subheader("Code Submission")
+    code_input = st.text_area("Paste your code here:", height=300)
 
     col1, col2 = st.columns(2)
-
-    # Run Code Button
-    if col1.button("Run Code"):
-        if code.strip():
-            output = io.StringIO()
-            namespace = {}
-            with contextlib.redirect_stdout(output):
-                try:
-                    exec(code, namespace)
+    
+    with col1:
+        if st.button("Run Code"):
+            if code_input.strip():
+                output, error = run_student_code(code_input)
+                if error:
+                    st.error(f"Error in code execution:\n{error}")
+                else:
                     st.success("Code executed successfully!")
-                    
-                    # Extract and display Folium map if present
-                    folium_map = extract_folium_map(namespace)
-                    if folium_map:
-                        html(folium_map._repr_html_(), height=500)
-                    
-                    # Display any print outputs, filtering out folium, IPython objects and text summaries
-                    output_text = output.getvalue()
-                    filtered_lines = [line for line in output_text.split('\n') 
-                                    if not ('<folium' in line or 
-                                          '<IPython' in line or 
-                                          '**text summary**' in line or 
-                                          '**distance report**' in line)
-                                    and line.strip()]
-                    if filtered_lines:
-                        st.write("Output:")
-                        st.write('\n'.join(filtered_lines))
-                        
-                except Exception as e:
-                    st.error(f"Error executing code: {str(e)}")
-        else:
-            st.warning("Please enter code before running")
+                    st.code(output)
+            else:
+                st.warning("Please enter code before running.")
 
-    # Submit Assignment Button
-    if col2.button("Submit Assignment"):
-        if not all([name, email, student_id, code]):
-            st.error("Please fill in all fields before submitting")
-        else:
-            try:
-                # Import grading function
-                from grade1 import grade_assignment
-                
-                # Grade the submission
-                total_grade = grade_assignment(code)
-                
-                # Save grade to CSV
-                save_grade(name, student_id, total_grade)
-                
-                st.success(f"Assignment submitted successfully! Total Grade: {total_grade}/100")
-            except Exception as e:
-                st.error(f"Error during submission: {str(e)}")
+    with col2:
+        if st.button("Submit Assignment"):
+            if not all([student_name, student_id, code_input]):
+                st.error("Please fill in all required fields (name, student ID, and code).")
+                return
+            
+            # Grade the submission
+            total_grade, feedback = grade_submission(code_input)
+            
+            # Save the grade
+            save_submission(student_name, student_id, total_grade)
+            
+            # Display results
+            st.success(f"Total Grade: {total_grade}/100")
+            st.write("Feedback:")
+            st.write(feedback)
 
 if __name__ == "__main__":
-    run()
+    main()
