@@ -89,7 +89,7 @@ def run():
                     # Extract and display Folium map if present
                     folium_map = extract_folium_map(namespace)
                     if folium_map:
-                        st.components.html(folium_map._repr_html_(), height=500)
+                        html(folium_map._repr_html_(), height=500)
                     
                     # Display any print outputs
                     output_text = output.getvalue()
