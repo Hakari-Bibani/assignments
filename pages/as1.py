@@ -57,7 +57,7 @@ run_code = st.button("Run Code")
 if run_code and student_code:
     try:
         # Execute the student's code
-        exec(student_code)
+        exec(student_code, globals())
         st.success("Code executed successfully!")
     except Exception as e:
         st.error(f"Error executing code: {e}")
