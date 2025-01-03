@@ -5,3 +5,4 @@ pillow
 geopy
 folium
 geopandas
+IPython
