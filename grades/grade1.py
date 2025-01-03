@@ -1,62 +1,75 @@
-import pandas as pd
-from geopy.distance import geodesic
+import streamlit as st
+import sys
+from io import StringIO
+from subprocess import run
+import io
 
-# Grading function
-def grade_submission(student_code_output, student_name, student_id):
-    grade = 0
-    feedback = []
+# Function to show assignment details
+def show_assignment_details():
+    st.title("Week 1 - Mapping Coordinates and Calculating Distances in Python")
+    with st.expander("Assignment Details"):
+        st.write("""
+        **Objective**: In this assignment, you will write a Python script to plot three geographical coordinates on a map and calculate the distance between each pair of points in kilometers.
 
-    # Points for code structure and implementation
-    if 'folium' in student_code_output and 'geopy' in student_code_output:
-        grade += 15
-        feedback.append("Correct libraries used.")
-    else:
-        feedback.append("Ensure you have used folium and geopy libraries.")
-    
-    # Distance calculation checks
-    correct_distances = {
-        "Point 1 to Point 2": 59.57,
-        "Point 2 to Point 3": 73.14,
-        "Point 1 to Point 3": 37.98
-    }
+        **Task Requirements:**
+        1. Plot the three coordinates on a map using Python libraries.
+        2. Calculate the distances between the points using geopy.
+        
+        **Coordinates:**
+        - Point 1: Latitude: 36.325735, Longitude: 43.928414
+        - Point 2: Latitude: 36.393432, Longitude: 44.586781
+        - Point 3: Latitude: 36.660477, Longitude: 43.840174
+        
+        **Python Libraries You Will Use:**
+        - `geopy` for distance calculation.
+        - `folium` for plotting the map.
+        - `geopandas` (optional) for advanced mapping.
 
-    distances_calculated = False
-    for key, correct_distance in correct_distances.items():
-        # Check if the code correctly calculates the distances
-        if key in student_code_output:
-            grade += 5
-            distances_calculated = True
-            feedback.append(f"Distance for {key} is calculated correctly.")
-        else:
-            feedback.append(f"Check distance calculation for {key}.")
-    
-    if distances_calculated:
-        grade += 10
+        **Expected Output:**
+        1. A map showing the three coordinates.
+        2. A text summary showing the calculated distances between:
+            - Point 1 and Point 2
+            - Point 2 and Point 3
+            - Point 1 and Point 3
+        """)
 
-    # Grading the map visualization (folium map generation)
-    if "Map generated" in student_code_output:
-        grade += 15
-        feedback.append("Map generated successfully with folium.")
-    else:
-        feedback.append("Map visualization is missing or incorrect.")
+# Collecting student info
+def collect_student_info():
+    with st.form(key='student_info_form'):
+        full_name = st.text_input("Full Name", key="full_name")
+        email = st.text_input("Email", key="email")
+        student_id = st.text_input("Student ID", key="student_id")
+        submit_button = st.form_submit_button(label="Submit Info")
+        return submit_button, full_name, email, student_id
 
-    # Save grade to data_submission.csv
-    student_data = {
-        'Full Name': student_name,
-        'Student ID': student_id,
-        'Assignment1': grade,
-        # Placeholder for other assignments and quizzes
-        'Total': grade
-    }
+# Code submission and execution
+def code_submission():
+    code = st.text_area("Paste your Python code here", height=400)
+    if st.button("Run Code"):
+        # Capturing output of the script execution
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
 
-    try:
-        # Load existing CSV and append the new entry
-        df = pd.read_csv('grades/data_submission.csv')
-        df = df.append(student_data, ignore_index=True)
-        df.to_csv('grades/data_submission.csv', index=False)
-    except FileNotFoundError:
-        # If the file doesn't exist, create a new one
-        df = pd.DataFrame([student_data])
-        df.to_csv('grades/data_submission.csv', index=False)
-    
-    return grade, feedback
+        try:
+            exec(code)
+            output = sys.stdout.getvalue()
+        except Exception as e:
+            output = str(e)
+        finally:
+            sys.stdout = old_stdout
+        st.text_area("Output", value=output, height=200)
+
+    if st.button("Submit Assignment"):
+        st.write("Submitting your assignment...")
+        # You can implement auto-grading and save the results here.
+
+# Main function to display everything
+def main():
+    show_assignment_details()
+    student_info_submitted, full_name, email, student_id = collect_student_info()
+
+    if student_info_submitted:
+        code_submission()
+
+if __name__ == "__main__":
+    main()
