@@ -1,75 +1,49 @@
-import streamlit as st
-import sys
-from io import StringIO
-from subprocess import run
-import io
+from geopy.distance import geodesic
+import folium
 
-# Function to show assignment details
-def show_assignment_details():
-    st.title("Week 1 - Mapping Coordinates and Calculating Distances in Python")
-    with st.expander("Assignment Details"):
-        st.write("""
-        **Objective**: In this assignment, you will write a Python script to plot three geographical coordinates on a map and calculate the distance between each pair of points in kilometers.
+def grade_assignment(student_code):
+    # Initialize grade
+    grade = 0
 
-        **Task Requirements:**
-        1. Plot the three coordinates on a map using Python libraries.
-        2. Calculate the distances between the points using geopy.
-        
-        **Coordinates:**
-        - Point 1: Latitude: 36.325735, Longitude: 43.928414
-        - Point 2: Latitude: 36.393432, Longitude: 44.586781
-        - Point 3: Latitude: 36.660477, Longitude: 43.840174
-        
-        **Python Libraries You Will Use:**
-        - `geopy` for distance calculation.
-        - `folium` for plotting the map.
-        - `geopandas` (optional) for advanced mapping.
+    # Check if required libraries are imported
+    if "import folium" in student_code and "from geopy.distance import geodesic" in student_code:
+        grade += 5  # Points for proper library imports
 
-        **Expected Output:**
-        1. A map showing the three coordinates.
-        2. A text summary showing the calculated distances between:
-            - Point 1 and Point 2
-            - Point 2 and Point 3
-            - Point 1 and Point 3
-        """)
+    # Check if coordinates are handled correctly
+    coordinates = [
+        (36.325735, 43.928414),  # Point 1
+        (36.393432, 44.586781),  # Point 2
+        (36.660477, 43.840174)   # Point 3
+    ]
+    if all(f"({lat}, {lon})" in student_code for lat, lon in coordinates):
+        grade += 5  # Points for correct coordinate handling
 
-# Collecting student info
-def collect_student_info():
-    with st.form(key='student_info_form'):
-        full_name = st.text_input("Full Name", key="full_name")
-        email = st.text_input("Email", key="email")
-        student_id = st.text_input("Student ID", key="student_id")
-        submit_button = st.form_submit_button(label="Submit Info")
-        return submit_button, full_name, email, student_id
+    # Check if code runs without errors
+    try:
+        exec(student_code)
+        grade += 10  # Points for code running without errors
+    except Exception as e:
+        print(f"Error executing code: {e}")
 
-# Code submission and execution
-def code_submission():
-    code = st.text_area("Paste your Python code here", height=400)
-    if st.button("Run Code"):
-        # Capturing output of the script execution
-        old_stdout = sys.stdout
-        sys.stdout = StringIO()
+    # Check map visualization
+    if "folium.Map" in student_code and "folium.Marker" in student_code and "folium.PolyLine" in student_code:
+        grade += 15  # Points for correct map generation
+        grade += 15  # Points for plotting all three points
+        grade += 10  # Points for proper map lines and connections
 
-        try:
-            exec(code)
-            output = sys.stdout.getvalue()
-        except Exception as e:
-            output = str(e)
-        finally:
-            sys.stdout = old_stdout
-        st.text_area("Output", value=output, height=200)
+    # Check distance calculations
+    correct_distances = {
+        (0, 1): 59.57,  # Point 1 to Point 2
+        (1, 2): 73.14,  # Point 2 to Point 3
+        (0, 2): 37.98   # Point 1 to Point 3
+    }
+    try:
+        exec(student_code)
+        for (i, j), correct_distance in correct_distances.items():
+            calculated_distance = geodesic(coordinates[i], coordinates[j]).km
+            if abs(calculated_distance - correct_distance) < 0.1:
+                grade += 6.67  # Points for each correct distance calculation
+    except Exception as e:
+        print(f"Error calculating distances: {e}")
 
-    if st.button("Submit Assignment"):
-        st.write("Submitting your assignment...")
-        # You can implement auto-grading and save the results here.
-
-# Main function to display everything
-def main():
-    show_assignment_details()
-    student_info_submitted, full_name, email, student_id = collect_student_info()
-
-    if student_info_submitted:
-        code_submission()
-
-if __name__ == "__main__":
-    main()
+    return min(grade, 100)  # Ensure grade does not exceed 100
