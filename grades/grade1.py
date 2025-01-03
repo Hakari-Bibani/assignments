@@ -1,95 +1,143 @@
-def grade_assignment(code):
+import ast
+from geopy.distance import geodesic
+import re
+
+def grade_assignment(code_submission):
     total_points = 0
     feedback = []
     
-    # Check for required imports
-    import_points = 0
-    required_imports = ['folium', 'geopy']
-    for imp in required_imports:
-        if imp in code:
-            import_points += 2.5
-            feedback.append(f"✓ Found {imp} import")
-        else:
-            feedback.append(f"✗ Missing {imp} import")
-    total_points += import_points
+    # Initialize coordinates for distance verification
+    COORDINATES = {
+        'point1': (36.325735, 43.928414),
+        'point2': (36.393432, 44.586781),
+        'point3': (36.660477, 43.840174)
+    }
     
-    # Check coordinates
-    coord_points = 0
-    required_coords = [
-        "36.325735", "43.928414",  # Point 1
-        "36.393432", "44.586781",  # Point 2
-        "36.660477", "43.840174"   # Point 3
-    ]
-    for coord in required_coords:
-        if coord in code:
-            coord_points += 0.83
-            
-    total_points += min(coord_points, 5)
+    CORRECT_DISTANCES = {
+        'p1_p2': 59.57,  # Point 1 to Point 2
+        'p2_p3': 73.14,  # Point 2 to Point 3
+        'p1_p3': 37.98   # Point 1 to Point 3
+    }
     
-    # Check for basic code structure
-    if "folium.Map" in code:
-        total_points += 15
-        feedback.append("✓ Map initialization found")
-    else:
-        feedback.append("✗ Missing map initialization")
-        
-    if "folium.Marker" in code:
-        total_points += 15
-        feedback.append("✓ Markers implementation found")
-    else:
-        feedback.append("✗ Missing markers")
-        
-    if "PolyLine" in code or "polyline" in code:
-        total_points += 10
-        feedback.append("✓ Found polyline implementation")
-    else:
-        feedback.append("✗ Missing polylines between points")
-    
-    # Check for distance calculations
-    if "geodesic" in code:
-        total_points += 10
-        feedback.append("✓ Found geodesic distance calculation")
-    else:
-        feedback.append("✗ Missing geodesic distance calculation")
-    
-    # Execute code to check distances
     try:
-        # Create a safe environment to execute the code
-        local_vars = {}
-        exec(code, {}, local_vars)
+        # Parse the code
+        tree = ast.parse(code_submission)
         
-        # Check if distances are close to expected values
-        expected_distances = {
-            "1-2": 59.57,
-            "2-3": 73.14,
-            "1-3": 37.98
-        }
+        # 1. Code Structure and Implementation (30 points)
         
-        distance_points = 0
-        for dist_name, expected in expected_distances.items():
-            # Look for any variable containing a number close to the expected distance
-            found = False
-            for var_name, value in local_vars.items():
-                if isinstance(value, (int, float)):
-                    if abs(value - expected) < 0.1:  # Allow 0.1 km tolerance
-                        distance_points += 6.67
-                        found = True
-                        break
-            
-            if found:
-                feedback.append(f"✓ Correct distance calculation for points {dist_name}")
+        # Check imports (5 points)
+        imports = [node for node in ast.walk(tree) if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom)]
+        required_libs = ['geopy', 'folium']
+        found_libs = []
+        
+        for imp in imports:
+            if isinstance(imp, ast.Import):
+                found_libs.extend(name.name.split('.')[0] for name in imp.names)
             else:
-                feedback.append(f"✗ Incorrect or missing distance calculation for points {dist_name}")
+                found_libs.append(imp.module.split('.')[0])
         
-        total_points += min(distance_points, 20)
+        import_score = 0
+        for lib in required_libs:
+            if lib in found_libs:
+                import_score += 2.5
+        
+        total_points += import_score
+        feedback.append(f"Library imports: {import_score}/5 points")
+        
+        # Check coordinate handling (5 points)
+        coordinate_score = 0
+        code_str = code_submission.lower()
+        
+        for coord in COORDINATES.values():
+            if str(coord[0]) in code_str and str(coord[1]) in code_str:
+                coordinate_score += 1.67
+        
+        total_points += coordinate_score
+        feedback.append(f"Coordinate handling: {coordinate_score}/5 points")
+        
+        # Code runs without errors (10 points)
+        try:
+            exec(code_submission)
+            total_points += 10
+            feedback.append("Code execution: 10/10 points")
+        except Exception as e:
+            feedback.append(f"Code execution: 0/10 points - Error: {str(e)}")
+        
+        # Code efficiency and best practices (10 points)
+        efficiency_score = 10
+        
+        # Check for unnecessary loops or redundant calculations
+        loops = len([node for node in ast.walk(tree) if isinstance(node, (ast.For, ast.While))])
+        if loops > 3:  # More loops than necessary
+            efficiency_score -= 2
+        
+        # Check variable naming
+        names = [node.id for node in ast.walk(tree) if isinstance(node, ast.Name)]
+        if any(len(name) < 2 for name in names):  # Poor variable naming
+            efficiency_score -= 2
+        
+        total_points += efficiency_score
+        feedback.append(f"Code efficiency: {efficiency_score}/10 points")
+        
+        # 2. Map Visualization (40 points)
+        
+        # Check for folium map creation (15 points)
+        map_score = 0
+        if 'folium.Map' in code_submission:
+            map_score += 15
+        
+        total_points += map_score
+        feedback.append(f"Map generation: {map_score}/15 points")
+        
+        # Check for markers (15 points)
+        marker_score = 0
+        marker_count = code_submission.count('Marker')
+        if marker_count >= 3:
+            marker_score += 15
+        else:
+            marker_score += (marker_count * 5)
+        
+        total_points += marker_score
+        feedback.append(f"Point plotting: {marker_score}/15 points")
+        
+        # Check for polylines (10 points)
+        polyline_score = 0
+        if 'PolyLine' in code_submission or 'polyline' in code_submission.lower():
+            polyline_score += 10
+        
+        total_points += polyline_score
+        feedback.append(f"Map connections: {polyline_score}/10 points")
+        
+        # 3. Distance Calculations (30 points)
+        
+        # Check for geodesic implementation (10 points)
+        distance_score = 0
+        if 'geodesic' in code_submission:
+            distance_score += 10
+        
+        total_points += distance_score
+        feedback.append(f"Distance calculation implementation: {distance_score}/10 points")
+        
+        # Check distance accuracy (20 points)
+        accuracy_score = 0
+        
+        # Extract numbers that look like distances from the code
+        numbers = re.findall(r'\d+\.\d+', code_submission)
+        distances_found = [float(num) for num in numbers if 35 < float(num) < 75]  # Range for possible distances
+        
+        correct_values = list(CORRECT_DISTANCES.values())
+        for dist in distances_found:
+            if any(abs(dist - correct) < 0.1 for correct in correct_values):
+                accuracy_score += 6.67
+        
+        total_points += accuracy_score
+        feedback.append(f"Distance accuracy: {accuracy_score}/20 points")
         
     except Exception as e:
-        feedback.append(f"Error executing code: {str(e)}")
+        feedback.append(f"Error during grading: {str(e)}")
+        return 0, "\n".join(feedback)
     
-    # Code efficiency and best practices (10 points)
-    if len(code.split('\n')) < 50:  # Reasonable length
-        total_points += 5
-    if code.count('    ') > code.count('\t'):  # Proper indentation
-        total_points += 5
+    # Round total points to nearest integer
+    total_points = round(total_points)
     
-    return round(total_points), '\n'.join(feedback)
+    return total_points, "\n".join(feedback)
