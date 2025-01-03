@@ -1,50 +1,48 @@
 import streamlit as st
-from streamlit_marquee import streamlit_marquee
+import base64
 
 def apply_style():
-    # Custom CSS
     st.markdown("""
         <style>
-        .title {
-            font-size: 4em;
-            color: red;
-            text-align: center;
-            animation: moveText 10s linear infinite;
+        @keyframes move {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(20px); }
+            100% { transform: translateX(0); }
         }
         
-        @keyframes moveText {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
+        .main-title {
+            font-size: 4rem;
+            color: red;
+            text-align: center;
+            animation: move 2s infinite;
         }
         
         .stExpander {
             background-color: #f0f2f6;
             border-radius: 10px;
             margin: 10px 0;
+            padding: 10px;
             transition: transform 0.3s;
         }
         
         .stExpander:hover {
             transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         
-        .card {
-            perspective: 1000px;
-            transition: transform 0.8s;
-            transform-style: preserve-3d;
+        .stButton>button {
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
         }
         
-        .card:hover {
-            transform: rotateY(180deg);
+        .stButton>button:hover {
+            background-color: #45a049;
         }
         </style>
+        
+        <div class="main-title">ImpactHub</div>
     """, unsafe_allow_html=True)
-    
-    # Animated title
-    streamlit_marquee(
-        text="ImpactHub",
-        font_size="4em",
-        text_color="red",
-        background_color="transparent",
-        speed=50
-    )
