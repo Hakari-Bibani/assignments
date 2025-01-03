@@ -1,8 +1,5 @@
 streamlit
 pandas
+Pillow
 numpy
-plotly
-pillow
-streamlit-option-menu
 python-dotenv
-requests
