@@ -4,7 +4,8 @@ import io
 import contextlib
 import pandas as pd
 import os
-from grade1 import grade_assignment
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from grades.grade1 import grade_assignment
 
 def main():
     st.title("Week 1 Assignment")
