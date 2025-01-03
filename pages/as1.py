@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import sys
+from streamlit_folium import st_folium  # For rendering Folium maps in Streamlit
 
 # Add the 'grades' directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../grades')))
@@ -56,7 +57,15 @@ run_code = st.button("Run Code")
 
 if run_code and student_code:
     try:
-        # Execute the student's code
+        # Replace IPython.display.display with st_folium and st.write
+        student_code = student_code.replace(
+            "from IPython.display import display",
+            "from streamlit_folium import st_folium"
+        )
+        student_code = student_code.replace("display(", "st_folium(")
+        student_code = student_code.replace("print(", "st.write(")
+
+        # Execute the modified student code
         exec(student_code, globals())
         st.success("Code executed successfully!")
     except Exception as e:
