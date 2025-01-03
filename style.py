@@ -1,33 +1,33 @@
 import streamlit as st
 
 def apply_style():
-    """Apply custom styling to the Streamlit app"""
-    
-    # Custom CSS for the entire application
+    """Apply custom styling to the application"""
     st.markdown("""
         <style>
-        /* Moving title animation */
+        /* Main title animation */
         @keyframes moveText {
             0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+            50% { transform: translateX(20%); }
+            100% { transform: translateX(-100%); }
         }
         
         .moving-title {
-            font-size: 4em;
             color: red;
+            font-size: 4em;
             font-weight: bold;
-            text-align: center;
             animation: moveText 10s linear infinite;
             white-space: nowrap;
-            overflow: hidden;
-            margin: 20px 0;
+            margin-bottom: 2em;
         }
         
         /* Flip card styling */
         .flip-card {
             background-color: transparent;
+            width: 100%;
+            height: 200px;
             perspective: 1000px;
-            margin: 10px 0;
+            margin-bottom: 20px;
+            cursor: pointer;
         }
         
         .flip-card-inner {
@@ -48,59 +48,49 @@ def apply_style():
             width: 100%;
             height: 100%;
             backface-visibility: hidden;
-            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             border-radius: 10px;
+            padding: 20px;
         }
         
         .flip-card-front {
-            background-color: #f0f2f6;
-            color: #31333F;
+            background: linear-gradient(145deg, #2e7d32, #1b5e20);
+            color: white;
         }
         
         .flip-card-back {
-            background-color: #31333F;
+            background: linear-gradient(145deg, #1976d2, #1565c0);
             color: white;
             transform: rotateY(180deg);
         }
         
-        .flip-card-content {
-            padding: 10px;
-            background-color: #f0f2f6;
-            border-radius: 5px;
-            margin: 5px 0;
-            transition: all 0.3s ease;
-        }
-        
-        .flip-card-content:hover {
-            background-color: #e0e2e6;
-            transform: scale(1.02);
-        }
-        
-        /* Button styling */
+        /* Custom button styling */
         .stButton button {
             width: 100%;
+            margin-top: 10px;
             background-color: #4CAF50;
             color: white;
             border: none;
             padding: 10px;
             border-radius: 5px;
-            transition: all 0.3s ease;
+            transition: background-color 0.3s;
         }
         
         .stButton button:hover {
             background-color: #45a049;
-            transform: scale(1.05);
-        }
-        
-        /* Header styling */
-        h1, h2, h3 {
-            color: #31333F;
-            margin: 20px 0;
         }
         
         /* Sidebar styling */
-        .sidebar .sidebar-content {
-            background-color: #f0f2f6;
+        .css-1d391kg {
+            background-color: #f5f5f5;
+        }
+        
+        /* Headers styling */
+        h1, h2, h3 {
+            font-family: 'Arial', sans-serif;
+            margin-bottom: 1em;
         }
         </style>
     """, unsafe_allow_html=True)
