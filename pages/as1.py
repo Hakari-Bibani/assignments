@@ -4,9 +4,6 @@ import pandas as pd
 import sys
 import io
 from pathlib import Path
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent / 'grades'))
 from grade1 import grade_assignment
 
 def main():
@@ -65,7 +62,13 @@ def main():
                 # Look for map object in locals
                 local_vars = locals()
                 if 'm' in local_vars and 'folium' in user_code:
-                    st.components.v1.html(local_vars['m']._repr_html_(), height=500)
+                    try:
+                        # Save map to temporary HTML file
+                        local_vars['m'].save('temp_map.html')
+                        with open('temp_map.html', 'r') as f:
+                            st.components.v1.html(f.read(), height=500)
+                    except Exception as e:
+                        st.error(f"Error displaying map: {str(e)}")
                 
             except Exception as e:
                 sys.stdout = old_stdout
