@@ -3,7 +3,7 @@ import subprocess
 import sys
 import pandas as pd
 import os
-from grade1 import calculate_grade
+from grades.grade1 import calculate_grade  # Updated import statement
 
 # Ensure the grades directory exists
 if not os.path.exists("grades"):
