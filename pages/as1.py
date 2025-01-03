@@ -1,6 +1,6 @@
 import streamlit as st
 import folium
-from folium.plugins import Marker
+from folium import Marker  # Corrected import
 from geopy.distance import geodesic
 import pandas as pd
 import os
