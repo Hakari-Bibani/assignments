@@ -1,143 +1,142 @@
-import ast
-from geopy.distance import geodesic
-import re
+import pandas as pd
+from pathlib import Path
+import json
+from as1 import run_assignment
 
-def grade_assignment(code_submission):
-    total_points = 0
+def grade_assignment(student_code, student_info):
+    """
+    Grade the student's assignment submission
+    Returns a tuple of (grade, feedback)
+    """
+    total_points = 100
+    points = 0
     feedback = []
     
-    # Initialize coordinates for distance verification
-    COORDINATES = {
-        'point1': (36.325735, 43.928414),
-        'point2': (36.393432, 44.586781),
-        'point3': (36.660477, 43.840174)
-    }
+    # Run the student's code
+    success, output, error = run_assignment(student_code)
     
-    CORRECT_DISTANCES = {
-        'p1_p2': 59.57,  # Point 1 to Point 2
-        'p2_p3': 73.14,  # Point 2 to Point 3
-        'p1_p3': 37.98   # Point 1 to Point 3
-    }
+    if not success:
+        feedback.append(f"Code execution failed: {error}")
+        return 0, feedback
     
-    try:
-        # Parse the code
-        tree = ast.parse(code_submission)
+    # Grade the implementation (50 points)
+    if output and 'map' in output:
+        points += 25
+        feedback.append("✓ Successfully created map")
+    else:
+        feedback.append("⨯ Failed to create map")
+    
+    if output and 'distances' in output:
+        points += 25
+        feedback.append("✓ Successfully calculated distances")
+    else:
+        feedback.append("⨯ Failed to calculate distances")
+    
+    # Grade the accuracy (50 points)
+    if output and 'distances' in output:
+        correct_distances = {
+            'Point 1 to Point 2': 56.32,
+            'Point 2 to Point 3': 63.45,
+            'Point 1 to Point 3': 37.21
+        }
         
-        # 1. Code Structure and Implementation (30 points)
-        
-        # Check imports (5 points)
-        imports = [node for node in ast.walk(tree) if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom)]
-        required_libs = ['geopy', 'folium']
-        found_libs = []
-        
-        for imp in imports:
-            if isinstance(imp, ast.Import):
-                found_libs.extend(name.name.split('.')[0] for name in imp.names)
+        accuracy_points = 0
+        for key, correct_val in correct_distances.items():
+            if abs(output['distances'][key] - correct_val) < 0.1:
+                accuracy_points += 16.67  # ~50 points / 3 distances
+                feedback.append(f"✓ Correct distance for {key}")
             else:
-                found_libs.append(imp.module.split('.')[0])
+                feedback.append(f"⨯ Incorrect distance for {key}")
         
-        import_score = 0
-        for lib in required_libs:
-            if lib in found_libs:
-                import_score += 2.5
-        
-        total_points += import_score
-        feedback.append(f"Library imports: {import_score}/5 points")
-        
-        # Check coordinate handling (5 points)
-        coordinate_score = 0
-        code_str = code_submission.lower()
-        
-        for coord in COORDINATES.values():
-            if str(coord[0]) in code_str and str(coord[1]) in code_str:
-                coordinate_score += 1.67
-        
-        total_points += coordinate_score
-        feedback.append(f"Coordinate handling: {coordinate_score}/5 points")
-        
-        # Code runs without errors (10 points)
-        try:
-            exec(code_submission)
-            total_points += 10
-            feedback.append("Code execution: 10/10 points")
-        except Exception as e:
-            feedback.append(f"Code execution: 0/10 points - Error: {str(e)}")
-        
-        # Code efficiency and best practices (10 points)
-        efficiency_score = 10
-        
-        # Check for unnecessary loops or redundant calculations
-        loops = len([node for node in ast.walk(tree) if isinstance(node, (ast.For, ast.While))])
-        if loops > 3:  # More loops than necessary
-            efficiency_score -= 2
-        
-        # Check variable naming
-        names = [node.id for node in ast.walk(tree) if isinstance(node, ast.Name)]
-        if any(len(name) < 2 for name in names):  # Poor variable naming
-            efficiency_score -= 2
-        
-        total_points += efficiency_score
-        feedback.append(f"Code efficiency: {efficiency_score}/10 points")
-        
-        # 2. Map Visualization (40 points)
-        
-        # Check for folium map creation (15 points)
-        map_score = 0
-        if 'folium.Map' in code_submission:
-            map_score += 15
-        
-        total_points += map_score
-        feedback.append(f"Map generation: {map_score}/15 points")
-        
-        # Check for markers (15 points)
-        marker_score = 0
-        marker_count = code_submission.count('Marker')
-        if marker_count >= 3:
-            marker_score += 15
-        else:
-            marker_score += (marker_count * 5)
-        
-        total_points += marker_score
-        feedback.append(f"Point plotting: {marker_score}/15 points")
-        
-        # Check for polylines (10 points)
-        polyline_score = 0
-        if 'PolyLine' in code_submission or 'polyline' in code_submission.lower():
-            polyline_score += 10
-        
-        total_points += polyline_score
-        feedback.append(f"Map connections: {polyline_score}/10 points")
-        
-        # 3. Distance Calculations (30 points)
-        
-        # Check for geodesic implementation (10 points)
-        distance_score = 0
-        if 'geodesic' in code_submission:
-            distance_score += 10
-        
-        total_points += distance_score
-        feedback.append(f"Distance calculation implementation: {distance_score}/10 points")
-        
-        # Check distance accuracy (20 points)
-        accuracy_score = 0
-        
-        # Extract numbers that look like distances from the code
-        numbers = re.findall(r'\d+\.\d+', code_submission)
-        distances_found = [float(num) for num in numbers if 35 < float(num) < 75]  # Range for possible distances
-        
-        correct_values = list(CORRECT_DISTANCES.values())
-        for dist in distances_found:
-            if any(abs(dist - correct) < 0.1 for correct in correct_values):
-                accuracy_score += 6.67
-        
-        total_points += accuracy_score
-        feedback.append(f"Distance accuracy: {accuracy_score}/20 points")
-        
-    except Exception as e:
-        feedback.append(f"Error during grading: {str(e)}")
-        return 0, "\n".join(feedback)
+        points += round(accuracy_points)
     
-    # Round total points to nearest integer
-    total_points = round(total_points)
+    # Save grade to CSV
+    save_grade(student_info, round(points))
     
-    return total_points, "\n".join(feedback)
+    return round(points), feedback
+
+def save_grade(student_info, grade):
+    """
+    Save the student's grade to the grades CSV file
+    """
+    csv_path = Path('grades/data_submission.csv')
+    
+    # Create CSV with headers if it doesn't exist
+    if not csv_path.exists():
+        df = pd.DataFrame(columns=[
+            'Full name', 'student ID', 'assignment1', 'assignment2', 'assignment3',
+            'assignment4', 'assignment5', 'assignment6', 'assignment7', 'assignment8',
+            'assignment9', 'assignment10', 'assignment11', 'assignment12', 'assignment13',
+            'assignment14', 'assignment15', 'quiz1', 'quiz2', 'quiz3', 'quiz4', 'quiz5',
+            'quiz6', 'quiz7', 'quiz8', 'quiz9', 'quiz10', 'total'
+        ])
+        df.to_csv(csv_path, index=False)
+    
+    # Read existing grades
+    df = pd.read_csv(csv_path)
+    
+    # Update or add student's grade
+    student_mask = df['student ID'] == student_info['studentId']
+    
+    if student_mask.any():
+        # Update existing student
+        df.loc[student_mask, 'assignment1'] = grade
+    else:
+        # Add new student
+        new_row = {col: 0 for col in df.columns}
+        new_row.update({
+            'Full name': student_info['fullName'],
+            'student ID': student_info['studentId'],
+            'assignment1': grade
+        })
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    
+    # Calculate total
+    assignment_cols = [col for col in df.columns if col.startswith('assignment')]
+    quiz_cols = [col for col in df.columns if col.startswith('quiz')]
+    df['total'] = df[assignment_cols + quiz_cols].sum(axis=1)
+    
+    # Save updated grades
+    df.to_csv(csv_path, index=False)
+
+if __name__ == "__main__":
+    # Test the grading script
+    test_code = """
+import folium
+from geopy.distance import geodesic
+
+def create_map():
+    coordinates = [
+        (36.325735, 43.928414),
+        (36.393432, 44.586781),
+        (36.660477, 43.840174)
+    ]
+    m = folium.Map(location=[36.393432, 44.586781], zoom_start=10)
+    for i, coord in enumerate(coordinates, 1):
+        folium.Marker(coord, popup=f'Point {i}').add_to(m)
+    return m
+
+def calculate_distances():
+    coordinates = [
+        (36.325735, 43.928414),
+        (36.393432, 44.586781),
+        (36.660477, 43.840174)
+    ]
+    return {
+        'Point 1 to Point 2': geodesic(coordinates[0], coordinates[1]).kilometers,
+        'Point 2 to Point 3': geodesic(coordinates[1], coordinates[2]).kilometers,
+        'Point 1 to Point 3': geodesic(coordinates[0], coordinates[2]).kilometers
+    }
+"""
+    
+    test_student = {
+        'fullName': 'Test Student',
+        'studentId': 'TEST001',
+        'email': 'test@example.com'
+    }
+    
+    grade, feedback = grade_assignment(test_code, test_student)
+    print(f"Grade: {grade}/100")
+    print("Feedback:")
+    for item in feedback:
+        print(f"- {item}")
