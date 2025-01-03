@@ -2,57 +2,57 @@ import streamlit as st
 import importlib
 from style import apply_style
 
-def load_assignment_module(assignment_number):
+def load_page(page_name, page_number):
+    """Load assignment or quiz page"""
+    if page_name == 'assignment':
+        module_name = f'as{page_number}'
+    else:  # quiz
+        module_name = f'quiz{page_number}'
+    
     try:
-        module = importlib.import_module(f'as{assignment_number}')
-        return module
+        # Clear the main page content
+        st.empty()
+        
+        # Import and display the selected module
+        module = importlib.import_module(module_name)
+        
+        # Add a back button
+        if st.button("← Back to Main Page"):
+            st.session_state.current_page = 'main'
+            st.experimental_rerun()
+            
+        # Display the module content
+        if hasattr(module, 'main'):
+            module.main()
     except ImportError:
-        return None
+        st.error(f"Unable to load {module_name}. Make sure the file exists.")
 
-def load_quiz_module(quiz_number):
-    try:
-        module = importlib.import_module(f'quiz{quiz_number}')
-        return module
-    except ImportError:
-        return None
-
-def create_flip_card(title, description, link_text, key):
+def create_flip_card(title, description, page_type, number):
+    """Create a flip card with navigation"""
     with st.container():
         col1, col2 = st.columns([3, 1])
         
-        # Create a card-like container with hover effect
         with col1:
-            card = st.container()
-            with card:
-                st.markdown(f"""
-                <div class='flip-card' id='{key}'>
-                    <div class='flip-card-inner'>
-                        <div class='flip-card-front'>
-                            <h3>{title}</h3>
-                        </div>
-                        <div class='flip-card-back'>
-                            <p>{description}</p>
-                        </div>
+            st.markdown(f"""
+            <div class='flip-card' id='{page_type}_{number}'>
+                <div class='flip-card-inner'>
+                    <div class='flip-card-front'>
+                        <h3>{title}</h3>
+                    </div>
+                    <div class='flip-card-back'>
+                        <p>{description}</p>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
-
-        # Navigation button
+            </div>
+            """, unsafe_allow_html=True)
+        
         with col2:
-            if st.button(f"Go to {link_text}", key=f"btn_{key}"):
-                module = None
-                if 'Assignment' in title:
-                    assignment_num = int(title.split()[-1])
-                    module = load_assignment_module(assignment_num)
-                else:
-                    quiz_num = int(title.split()[-1])
-                    module = load_quiz_module(quiz_num)
-                
-                if module and hasattr(module, 'main'):
-                    st.session_state.current_page = module.__name__
-                    module.main()
+            if st.button(f"Open {title}", key=f"btn_{page_type}_{number}"):
+                st.session_state.current_page = f"{page_type}_{number}"
+                st.experimental_rerun()
 
-def main():
+def main_page():
+    """Display the main page with flip cards"""
     # Apply custom styling
     apply_style()
     
@@ -66,34 +66,39 @@ def main():
     # Tabs for Assignments and Quizzes
     tab1, tab2 = st.tabs(["Assignments", "Quizzes"])
 
-    # Assignments Section
     with tab1:
         st.markdown("## Assignments")
         for i in range(1, 16):
             create_flip_card(
                 f"Assignment {i}",
-                f"Click to view details for Assignment {i}",
-                f"Assignment {i}",
-                f"assignment_{i}"
+                f"Click to view and submit Assignment {i}",
+                "assignment",
+                i
             )
 
-    # Quizzes Section
     with tab2:
         st.markdown("## Quizzes")
         for i in range(1, 11):
             create_flip_card(
                 f"Quiz {i}",
-                f"Click to view details for Quiz {i}",
-                f"Quiz {i}",
-                f"quiz_{i}"
+                f"Click to take Quiz {i}",
+                "quiz",
+                i
             )
 
-if __name__ == "__main__":
+def main():
+    """Main application logic"""
+    # Initialize session state
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 'main'
     
+    # Handle navigation
     if st.session_state.current_page == 'main':
-        main()
+        main_page()
     else:
-        module = importlib.import_module(st.session_state.current_page)
-        module.main()
+        # Parse the current page to get type and number
+        page_type, page_number = st.session_state.current_page.split('_')
+        load_page(page_type, page_number)
+
+if __name__ == "__main__":
+    main()
