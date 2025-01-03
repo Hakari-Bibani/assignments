@@ -1,6 +1,12 @@
 import streamlit as st
 import pandas as pd
 import os
+import sys
+
+# Add the 'grades' directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../grades')))
+
+# Now import grade_assignment
 from grade1 import grade_assignment
 
 # Page configuration
@@ -58,25 +64,4 @@ if run_code and student_code:
 
 # Submit assignment for grading
 if st.button("Submit Assignment"):
-    if not full_name or not email or not student_id:
-        st.error("Please fill in your full name, email, and student ID.")
-    else:
-        # Grade the assignment
-        grade = grade_assignment(student_code)
-        
-        # Save the grade to data_submission.csv
-        grades_path = os.path.join("grades", "data_submission.csv")
-        if not os.path.exists(grades_path):
-            df = pd.DataFrame(columns=["Full name", "Student ID", "Email", "assignment1"])
-        else:
-            df = pd.read_csv(grades_path)
-        
-        # Update or add the student's grade
-        if student_id in df["Student ID"].values:
-            df.loc[df["Student ID"] == student_id, "assignment1"] = grade
-        else:
-            new_row = {"Full name": full_name, "Student ID": student_id, "Email": email, "assignment1": grade}
-            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-        
-        df.to_csv(grades_path, index=False)
-        st.success(f"Assignment submitted successfully! Your grade: {grade}/100")
+    if not full_name or not email or not student
