@@ -1,45 +1,62 @@
+import pandas as pd
 from geopy.distance import geodesic
 
-def grade_assignment(student_code):
-    # Initialize grade
+# Grading function
+def grade_submission(student_code_output, student_name, student_id):
     grade = 0
+    feedback = []
 
-    # Check for correct library imports
-    if "import folium" in student_code and "from geopy.distance import geodesic" in student_code:
-        grade += 5  # Full points for correct imports
-
-    # Check for correct coordinate handling
-    coordinates = [
-        (36.325735, 43.928414),  # Point 1
-        (36.393432, 44.586781),  # Point 2
-        (36.660477, 43.840174)   # Point 3
-    ]
-    if all(f"({lat}, {lon})" in student_code for lat, lon in coordinates):
-        grade += 5  # Full points for correct coordinate handling
-
-    # Check if code runs without errors
-    try:
-        exec(student_code)
-        grade += 10  # Full points for error-free execution
-    except:
-        pass  # No points if code fails
-
-    # Check for map visualization
-    if "folium.Map" in student_code and "folium.Marker" in student_code:
-        grade += 15  # Full points for map generation
-    if "folium.PolyLine" in student_code:
-        grade += 10  # Full points for map lines
-
-    # Check for distance calculations
+    # Points for code structure and implementation
+    if 'folium' in student_code_output and 'geopy' in student_code_output:
+        grade += 15
+        feedback.append("Correct libraries used.")
+    else:
+        feedback.append("Ensure you have used folium and geopy libraries.")
+    
+    # Distance calculation checks
     correct_distances = {
         "Point 1 to Point 2": 59.57,
         "Point 2 to Point 3": 73.14,
         "Point 1 to Point 3": 37.98
     }
-    if "geodesic" in student_code:
-        grade += 10  # Full points for using geodesic
-        for pair, distance in correct_distances.items():
-            if f"{distance:.2f}" in student_code:
-                grade += 6.67  # Approx 20 points for all distances
 
-    return min(grade, 100)  # Ensure grade does not exceed 100
+    distances_calculated = False
+    for key, correct_distance in correct_distances.items():
+        # Check if the code correctly calculates the distances
+        if key in student_code_output:
+            grade += 5
+            distances_calculated = True
+            feedback.append(f"Distance for {key} is calculated correctly.")
+        else:
+            feedback.append(f"Check distance calculation for {key}.")
+    
+    if distances_calculated:
+        grade += 10
+
+    # Grading the map visualization (folium map generation)
+    if "Map generated" in student_code_output:
+        grade += 15
+        feedback.append("Map generated successfully with folium.")
+    else:
+        feedback.append("Map visualization is missing or incorrect.")
+
+    # Save grade to data_submission.csv
+    student_data = {
+        'Full Name': student_name,
+        'Student ID': student_id,
+        'Assignment1': grade,
+        # Placeholder for other assignments and quizzes
+        'Total': grade
+    }
+
+    try:
+        # Load existing CSV and append the new entry
+        df = pd.read_csv('grades/data_submission.csv')
+        df = df.append(student_data, ignore_index=True)
+        df.to_csv('grades/data_submission.csv', index=False)
+    except FileNotFoundError:
+        # If the file doesn't exist, create a new one
+        df = pd.DataFrame([student_data])
+        df.to_csv('grades/data_submission.csv', index=False)
+    
+    return grade, feedback
