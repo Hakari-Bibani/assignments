@@ -1,78 +1,77 @@
 import streamlit as st
+import os
+import style
+from PIL import Image
 
-def get_animated_title():
-    return '''
-    <style>
-        @keyframes slide {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        .sliding-text {
-            color: red;
-            font-size: 3em;
-            font-weight: bold;
-            white-space: nowrap;
-            animation: slide 15s linear infinite;
-            position: relative;
-            overflow: hidden;
-        }
-    </style>
-    <div style="overflow: hidden;">
-        <div class="sliding-text">Welcome to ImpactHub</div>
-    </div>
-    '''
+def load_assignments():
+    assignments = []
+    for i in range(1, 16):
+        assignments.append({
+            'title': f'Assignment {i}',
+            'description': f'Assignment {i} description',
+            'link': f'Assignment_{i}'
+        })
+    return assignments
 
-def apply_styles():
-    st.markdown('''
-        <style>
-            .flip-card {
-                background-color: transparent;
-                width: 300px;
-                height: 200px;
-                perspective: 1000px;
-                margin: 20px;
-            }
-            
-            .flip-card-inner {
-                position: relative;
-                width: 100%;
-                height: 100%;
-                text-align: center;
-                transition: transform 0.8s;
-                transform-style: preserve-3d;
-                cursor: pointer;
-            }
-            
-            .flip-card:hover .flip-card-inner {
-                transform: rotateY(180deg);
-            }
-            
-            .flip-card-front, .flip-card-back {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                backface-visibility: hidden;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 10px;
-            }
-            
-            .flip-card-front {
-                background-color: #2c3e50;
-                color: white;
-            }
-            
-            .flip-card-back {
-                background-color: #3498db;
-                color: white;
-                transform: rotateY(180deg);
-                padding: 20px;
-            }
-            
-            .stButton button {
-                width: 100%;
-                margin-top: 10px;
-            }
-        </style>
-    ''', unsafe_allow_html=True)
+def load_quizzes():
+    quizzes = []
+    for i in range(1, 11):
+        quizzes.append({
+            'title': f'Quiz {i}',
+            'description': f'Quiz {i} description',
+            'link': f'Quiz_{i}'
+        })
+    return quizzes
+
+def create_flip_card(title, description, link):
+    with st.container():
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f'''
+                <div class="flip-card">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front">
+                            <h3>{title}</h3>
+                        </div>
+                        <div class="flip-card-back">
+                            <p>{description}</p>
+                        </div>
+                    </div>
+                </div>
+            ''', unsafe_allow_html=True)
+        with col2:
+            if st.button(f'Go to {title}', key=link):
+                st.switch_page(f"pages/{link.lower()}.py")
+
+def main():
+    st.set_page_config(page_title="ImpactHub", layout="wide")
+    style.apply_styles()
+    
+    # Title with animation
+    st.markdown(style.get_animated_title(), unsafe_allow_html=True)
+    
+    # Create two columns for Assignments and Quizzes
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.header("Assignments")
+        assignments = load_assignments()
+        for assignment in assignments:
+            create_flip_card(
+                assignment['title'],
+                assignment['description'],
+                assignment['link']
+            )
+    
+    with col2:
+        st.header("Quizzes")
+        quizzes = load_quizzes()
+        for quiz in quizzes:
+            create_flip_card(
+                quiz['title'],
+                quiz['description'],
+                quiz['link']
+            )
+
+if __name__ == "__main__":
+    main()
