@@ -1,10 +1,4 @@
 streamlit
+Pillow
 pandas
 numpy
-pillow
-plotly
-matplotlib
-seaborn
-scikit-learn
-python-dotenv
-streamlit-extras
