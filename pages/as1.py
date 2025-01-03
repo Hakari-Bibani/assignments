@@ -1,23 +1,26 @@
+# pages/as1.py
 import streamlit as st
 import sys
 import io
 import contextlib
 import pandas as pd
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from grades.grade1 import grade_assignment
+import folium
+from streamlit_folium import st_folium
+from geopy.distance import geodesic
 
 def main():
     st.title("Week 1 Assignment")
     
-    # Student Information
     with st.form("student_info"):
-        st.subheader("Student Information")
-        full_name = st.text_input("Full Name")
-        email = st.text_input("Email")
-        student_id = st.text_input("Student ID")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            full_name = st.text_input("Full Name")
+        with col2:
+            email = st.text_input("Email")
+        with col3:
+            student_id = st.text_input("Student ID")
         
-        # Assignment Details in Accordion
         with st.expander("Assignment Details", expanded=True):
             st.markdown("""
             **Assignment: Week 1 – Mapping Coordinates and Calculating Distances in Python**
@@ -30,72 +33,107 @@ def main():
             - Point 3: 36.660477, 43.840174
             
             **Required Libraries:**
-            - geopy
-            - folium
-            - geopandas (optional)
+            ```python
+            import folium
+            from geopy.distance import geodesic
+            ```
             """)
 
-        # Code Submission
         st.subheader("Code Submission")
         code = st.text_area("Paste your code here:", height=300)
-        
-        # Submit button for the form
-        submitted = st.form_submit_button("Submit Assignment")
+        submit_button = st.form_submit_button("Submit Assignment")
 
-    # Run Code button (outside the form)
     if st.button("Run Code"):
         if code:
             try:
-                # Capture stdout
+                # Create a string buffer to capture print outputs
                 stdout = io.StringIO()
                 with contextlib.redirect_stdout(stdout):
-                    exec(code)
-                st.write("Output:")
-                st.write(stdout.getvalue())
+                    # Execute the code in a safe environment
+                    local_dict = {}
+                    exec(code, {"folium": folium, "geodesic": geodesic, "st": st, 
+                               "st_folium": st_folium}, local_dict)
+                
+                # Display any print outputs
+                output = stdout.getvalue()
+                if output:
+                    st.text("Program Output:")
+                    st.code(output)
+                    
                 st.success("Code executed successfully!")
             except Exception as e:
                 st.error(f"Error executing code: {str(e)}")
 
-    # Handle submission
-    if submitted:
+    if submit_button:
         if not all([full_name, email, student_id, code]):
             st.error("Please fill in all fields")
             return
 
-        # Grade the submission
-        grade, feedback = grade_assignment(code)
+        try:
+            # Grade submission
+            points = grade_submission(code)
+            
+            # Save grade
+            save_grade(full_name, student_id, points)
+            
+            st.success(f"Assignment submitted! Grade: {points}/100")
+        except Exception as e:
+            st.error(f"Error processing submission: {str(e)}")
+
+def grade_submission(code):
+    points = 0
+    
+    # Check for required libraries
+    if "import folium" in code and "geodesic" in code:
+        points += 10
         
-        # Display results
-        st.success(f"Total Grade: {grade}/100")
-        st.write("Feedback:", feedback)
+    # Check for coordinates
+    coordinates = [
+        "36.325735, 43.928414",
+        "36.393432, 44.586781",
+        "36.660477, 43.840174"
+    ]
+    for coord in coordinates:
+        if coord in code:
+            points += 5
+            
+    # Check for map creation and markers
+    if "folium.Map" in code:
+        points += 15
+    if "Marker" in code:
+        points += 15
         
-        # Save to CSV
-        save_grade(full_name, student_id, grade)
+    # Check for distance calculations
+    expected_distances = ["59.57", "73.14", "37.98"]
+    for dist in expected_distances:
+        if dist in code:
+            points += 10
+            
+    # Code structure and efficiency
+    if "def" in code and len(code.split('\n')) < 50:
+        points += 10
+        
+    return points
 
 def save_grade(full_name, student_id, grade):
-    csv_path = "grades/data_submission.csv"
+    # Create grades directory if it doesn't exist
+    os.makedirs('grades', exist_ok=True)
     
-    # Create directory if it doesn't exist
-    os.makedirs("grades", exist_ok=True)
+    file_path = 'grades/data_submission.csv'
     
-    # Initialize or load the CSV
-    if not os.path.exists(csv_path):
-        df = pd.DataFrame(columns=[
-            "full_name", "student_id"] + 
-            [f"assignment{i}" for i in range(1, 16)] +
-            [f"quiz{i}" for i in range(1, 11)] +
-            ["total"])
+    # Create or load the DataFrame
+    if os.path.exists(file_path):
+        df = pd.read_csv(file_path)
     else:
-        df = pd.read_csv(csv_path)
+        columns = ['full_name', 'student_id'] + \
+                 [f'assignment{i}' for i in range(1, 16)] + \
+                 [f'quiz{i}' for i in range(1, 11)] + \
+                 ['total']
+        df = pd.DataFrame(columns=columns)
     
     # Update or add new row
-    student_row = df[df['student_id'] == student_id].index
-    if len(student_row) > 0:
-        df.loc[student_row, 'assignment1'] = grade
-        # Recalculate total
-        assignments = df.loc[student_row, [f'assignment{i}' for i in range(1, 16)]].fillna(0)
-        quizzes = df.loc[student_row, [f'quiz{i}' for i in range(1, 11)]].fillna(0)
-        df.loc[student_row, 'total'] = assignments.mean() * 0.7 + quizzes.mean() * 0.3
+    if student_id in df['student_id'].values:
+        df.loc[df['student_id'] == student_id, 'assignment1'] = grade
     else:
         new_row = pd.DataFrame({
             'full_name': [full_name],
@@ -104,7 +142,15 @@ def save_grade(full_name, student_id, grade):
         })
         df = pd.concat([df, new_row], ignore_index=True)
     
-    df.to_csv(csv_path, index=False)
+    # Calculate total
+    assignment_cols = [f'assignment{i}' for i in range(1, 16)]
+    quiz_cols = [f'quiz{i}' for i in range(1, 11)]
+    
+    df['total'] = df[assignment_cols].fillna(0).mean(axis=1) * 0.7 + \
+                 df[quiz_cols].fillna(0).mean(axis=1) * 0.3
+    
+    # Save to CSV
+    df.to_csv(file_path, index=False)
 
 if __name__ == "__main__":
     main()
