@@ -1,86 +1,99 @@
 import streamlit as st
-import pandas as pd
-import os
-from style import apply_style
 import importlib
+from style import apply_style
 
-# Set page configuration
-st.set_page_config(page_title="ImpactHub", layout="wide")
-
-def load_module(module_name):
-    """Dynamically import module"""
+def load_assignment_module(assignment_number):
     try:
-        return importlib.import_module(module_name)
+        module = importlib.import_module(f'as{assignment_number}')
+        return module
     except ImportError:
-        st.error(f"Module {module_name} not found!")
         return None
 
-def create_flip_card(title, description, key):
-    """Create a flip card with CSS animation"""
+def load_quiz_module(quiz_number):
+    try:
+        module = importlib.import_module(f'quiz{quiz_number}')
+        return module
+    except ImportError:
+        return None
+
+def create_flip_card(title, description, link_text, key):
     with st.container():
-        st.markdown(f"""
-            <div class="flip-card" onclick="this.classList.toggle('flipped')" key="{key}">
-                <div class="flip-card-inner">
-                    <div class="flip-card-front">
-                        <h3>{title}</h3>
-                    </div>
-                    <div class="flip-card-back">
-                        <p>{description}</p>
+        col1, col2 = st.columns([3, 1])
+        
+        # Create a card-like container with hover effect
+        with col1:
+            card = st.container()
+            with card:
+                st.markdown(f"""
+                <div class='flip-card' id='{key}'>
+                    <div class='flip-card-inner'>
+                        <div class='flip-card-front'>
+                            <h3>{title}</h3>
+                        </div>
+                        <div class='flip-card-back'>
+                            <p>{description}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+
+        # Navigation button
+        with col2:
+            if st.button(f"Go to {link_text}", key=f"btn_{key}"):
+                module = None
+                if 'Assignment' in title:
+                    assignment_num = int(title.split()[-1])
+                    module = load_assignment_module(assignment_num)
+                else:
+                    quiz_num = int(title.split()[-1])
+                    module = load_quiz_module(quiz_num)
+                
+                if module and hasattr(module, 'main'):
+                    st.session_state.current_page = module.__name__
+                    module.main()
 
 def main():
     # Apply custom styling
     apply_style()
     
     # Title with animation
-    st.markdown('<h1 class="moving-title">ImpactHub</h1>', unsafe_allow_html=True)
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Assignments", "Quizzes"])
-    
-    if page == "Assignments":
-        st.header("Weekly Assignments")
-        cols = st.columns(3)
-        for week in range(1, 16):
-            with cols[week % 3]:
-                create_flip_card(
-                    f"Week {week}",
-                    f"Click to view assignment for Week {week}",
-                    f"week_{week}"
-                )
-                if st.button(f"Open Week {week}", key=f"btn_week_{week}"):
-                    module = load_module(f"week{week}")
-                    if module:
-                        module.main()
-    
-    else:  # Quizzes page
-        st.header("Available Quizzes")
-        cols = st.columns(2)
-        for quiz in range(1, 11):
-            with cols[quiz % 2]:
-                create_flip_card(
-                    f"Quiz {quiz}",
-                    f"Click to start Quiz {quiz}",
-                    f"quiz_{quiz}"
-                )
-                if st.button(f"Start Quiz {quiz}", key=f"btn_quiz_{quiz}"):
-                    module = load_module(f"quiz{quiz}")
-                    if module:
-                        module.main()
+    st.markdown("""
+        <div class="moving-title">
+            <h1>ImpactHub</h1>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Initialize or load grades dataframe
-    if not os.path.exists("grades"):
-        os.makedirs("grades")
-    
-    try:
-        grades_df = pd.read_csv("grades/data_submission.csv")
-    except FileNotFoundError:
-        grades_df = pd.DataFrame(columns=['student_id', 'assignment', 'submission_date', 'grade'])
-        grades_df.to_csv("grades/data_submission.csv", index=False)
+    # Tabs for Assignments and Quizzes
+    tab1, tab2 = st.tabs(["Assignments", "Quizzes"])
+
+    # Assignments Section
+    with tab1:
+        st.markdown("## Assignments")
+        for i in range(1, 16):
+            create_flip_card(
+                f"Assignment {i}",
+                f"Click to view details for Assignment {i}",
+                f"Assignment {i}",
+                f"assignment_{i}"
+            )
+
+    # Quizzes Section
+    with tab2:
+        st.markdown("## Quizzes")
+        for i in range(1, 11):
+            create_flip_card(
+                f"Quiz {i}",
+                f"Click to view details for Quiz {i}",
+                f"Quiz {i}",
+                f"quiz_{i}"
+            )
 
 if __name__ == "__main__":
-    main()
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 'main'
+    
+    if st.session_state.current_page == 'main':
+        main()
+    else:
+        module = importlib.import_module(st.session_state.current_page)
+        module.main()
