@@ -1,48 +1,35 @@
 import streamlit as st
-import base64
 
 def apply_style():
-    st.markdown("""
+    # Custom CSS for styling
+    st.markdown(
+        """
         <style>
-        @keyframes move {
+        /* Moving red title */
+        @keyframes moveTitle {
             0% { transform: translateX(0); }
             50% { transform: translateX(20px); }
             100% { transform: translateX(0); }
         }
-        
-        .main-title {
-            font-size: 4rem;
+        h1 {
             color: red;
+            font-size: 3.5em;
+            animation: moveTitle 2s infinite;
             text-align: center;
-            animation: move 2s infinite;
         }
-        
+
+        /* Flip card styling */
         .stExpander {
             background-color: #f0f2f6;
             border-radius: 10px;
+            padding: 10px;
             margin: 10px 0;
-            padding: 10px;
-            transition: transform 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        
         .stExpander:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .stButton>button {
-            width: 100%;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        
-        .stButton>button:hover {
-            background-color: #45a049;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
         }
         </style>
-        
-        <div class="main-title">ImpactHub</div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
