@@ -1,35 +1,29 @@
 import streamlit as st
 
-def apply_style():
-    # Custom CSS for styling
-    st.markdown(
-        """
+def apply_styles():
+    st.markdown("""
         <style>
-        /* Moving red title */
-        @keyframes moveTitle {
-            0% { transform: translateX(0); }
-            50% { transform: translateX(20px); }
-            100% { transform: translateX(0); }
+        body {
+            font-family: 'Tiranti Solid Std Regular', sans-serif;
         }
         h1 {
-            color: red;
-            font-size: 3.5em;
-            animation: moveTitle 2s infinite;
             text-align: center;
+            font-size: 3rem;
+            color: red;
         }
-
-        /* Flip card styling */
-        .stExpander {
-            background-color: #f0f2f6;
-            border-radius: 10px;
-            padding: 10px;
-            margin: 10px 0;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        .st-expander {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
         }
-        .stExpander:hover {
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        .st-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
         }
         </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
+
+apply_styles()
