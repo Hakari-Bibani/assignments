@@ -13,12 +13,44 @@ def calculate_distances(coords):
     dist1_3 = geodesic(point1, point3).kilometers
     return dist1_2, dist2_3, dist1_3
 
-# Function to generate a folium map
-def create_map(coords):
-    m = folium.Map(location=[36.5, 44], zoom_start=8)
-    for i, coord in enumerate(coords, start=1):
-        folium.Marker(coord, popup=f"Point {i}").add_to(m)
-    folium.PolyLine(coords, color="blue", weight=2.5, opacity=1).add_to(m)
+# Function to generate a folium map with popups showing distances
+def create_map_with_popups(coords):
+    # Initialize the map
+    m = folium.Map(location=[36.5, 44], zoom_start=8, tiles="cartodbpositron")
+
+    # Calculate distances
+    dist1_2 = geodesic(coords[0], coords[1]).kilometers
+    dist2_3 = geodesic(coords[1], coords[2]).kilometers
+    dist1_3 = geodesic(coords[0], coords[2]).kilometers
+
+    # Add markers with popups
+    folium.Marker(
+        location=coords[0],
+        popup=f"Point 1<br>Distance to Point 2: {dist1_2:.2f} km<br>Distance to Point 3: {dist1_3:.2f} km",
+        icon=folium.Icon(color="blue", icon="info-sign")
+    ).add_to(m)
+
+    folium.Marker(
+        location=coords[1],
+        popup=f"Point 2<br>Distance to Point 1: {dist1_2:.2f} km<br>Distance to Point 3: {dist2_3:.2f} km",
+        icon=folium.Icon(color="green", icon="info-sign")
+    ).add_to(m)
+
+    folium.Marker(
+        location=coords[2],
+        popup=f"Point 3<br>Distance to Point 1: {dist1_3:.2f} km<br>Distance to Point 2: {dist2_3:.2f} km",
+        icon=folium.Icon(color="red", icon="info-sign")
+    ).add_to(m)
+
+    # Add a polyline to connect the points
+    folium.PolyLine(
+        locations=coords,
+        color="blue",
+        weight=3,
+        opacity=0.8,
+        tooltip="Path between points"
+    ).add_to(m)
+
     return m
 
 # Coordinates
@@ -58,8 +90,8 @@ with tabs[0]:
             distances = calculate_distances(coordinates)
 
             # Display Map
-            map_obj = create_map(coordinates)
-            st_map = st_folium(map_obj, width=700, height=500, returned_objects=[])
+            map_obj = create_map_with_popups(coordinates)
+            st_map = st_folium(map_obj, width=800, height=600, returned_objects=[])
 
             # Display Distances
             st.write("### Calculated Distances:")
@@ -90,6 +122,6 @@ with tabs[1]:
             except FileNotFoundError:
                 df = pd.DataFrame(columns=["Full Name", "Student ID", "Assignment 1", "Total"])
 
-            df = df.append(new_entry, ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
             df.to_csv("grades/data_submission.csv", index=False)
             st.success("Submission successful!")
