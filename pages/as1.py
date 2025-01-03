@@ -1,28 +1,107 @@
+import streamlit as st
 import folium
 from geopy.distance import geodesic
+import pandas as pd
+from streamlit_folium import folium_static
+import sys
+sys.path.append('../grades')
+from grade1 import grade_assignment
 
-# Coordinates
-point1 = (36.325735, 43.928414)
-point2 = (36.393432, 44.586781)
-point3 = (36.660477, 43.840174)
+def run_student_code(code_string):
+    try:
+        # Create a local namespace
+        local_namespace = {}
+        # Execute the student's code
+        exec(code_string, globals(), local_namespace)
+        
+        # Check if required variables exist
+        required_vars = ['distances', 'map_obj']
+        for var in required_vars:
+            if var not in local_namespace:
+                return None, f"Error: Missing required variable '{var}'"
+        
+        return local_namespace['distances'], local_namespace['map_obj']
+    except Exception as e:
+        return None, f"Error: {str(e)}"
 
-# Create a map
-m = folium.Map(location=point1, zoom_start=10)
+def app():
+    st.title("Assignment 1: Mapping Coordinates and Calculating Distances")
+    
+    # Student Information Form
+    with st.form("student_info"):
+        full_name = st.text_input("Full Name")
+        email = st.text_input("Email")
+        student_id = st.text_input("Student ID")
+        next_button = st.form_submit_button("Next")
 
-# Add points to the map
-folium.Marker(point1, popup="Point 1").add_to(m)
-folium.Marker(point2, popup="Point 2").add_to(m)
-folium.Marker(point3, popup="Point 3").add_to(m)
+    if next_button and full_name and email and student_id:
+        # Assignment Details Accordion
+        with st.expander("Assignment Details", expanded=True):
+            st.markdown("""
+            ### Objective:
+            Write a Python script to plot three geographical coordinates on a map and calculate 
+            the distance between each pair of points in kilometers.
 
-# Calculate distances
-distance_1_2 = geodesic(point1, point2).kilometers
-distance_2_3 = geodesic(point2, point3).kilometers
-distance_1_3 = geodesic(point1, point3).kilometers
+            ### Coordinates:
+            - Point 1: (36.325735, 43.928414)
+            - Point 2: (36.393432, 44.586781)
+            - Point 3: (36.660477, 43.840174)
 
-# Display map
-m.save("map.html")
+            ### Required Libraries:
+            - folium
+            - geopy
+            """)
 
-# Print distance report
-print(f"Distance between Point 1 and Point 2: {distance_1_2:.2f} km")
-print(f"Distance between Point 2 and Point 3: {distance_2_3:.2f} km")
-print(f"Distance between Point 1 and Point 3: {distance_1_3:.2f} km")
+        # Code Input
+        code = st.text_area("Enter your Python code here:", height=300)
+
+        # Run Code Button
+        if st.button("Run Code"):
+            if code:
+                distances, map_obj = run_student_code(code)
+                if isinstance(map_obj, folium.Map):
+                    st.write("Map Output:")
+                    folium_static(map_obj)
+                    
+                if distances:
+                    st.write("Distance Report:")
+                    st.write(distances)
+                else:
+                    st.error("Error in distance calculations")
+            else:
+                st.warning("Please enter code before running")
+
+        # Submit Button
+        if st.button("Submit"):
+            if code:
+                # Grade the submission
+                grade = grade_assignment(code)
+                
+                # Save submission to CSV
+                submission_data = {
+                    'Full Name': [full_name],
+                    'Student ID': [student_id],
+                    'Email': [email],
+                    'Assignment 1': [grade],
+                    'Total': [grade]
+                }
+                df = pd.DataFrame(submission_data)
+                
+                try:
+                    # Try to read existing CSV file
+                    existing_df = pd.read_csv('submissions.csv')
+                    # Append new submission
+                    updated_df = pd.concat([existing_df, df], ignore_index=True)
+                except FileNotFoundError:
+                    # If file doesn't exist, create new one
+                    updated_df = df
+                
+                # Save to CSV
+                updated_df.to_csv('submissions.csv', index=False)
+                
+                st.success(f"Assignment submitted successfully! Grade: {grade}/100")
+            else:
+                st.warning("Please enter code before submitting")
+
+if __name__ == "__main__":
+    app()
