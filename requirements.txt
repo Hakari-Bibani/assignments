@@ -1,6 +1,6 @@
-streamlit==1.30.0
-streamlit-folium==0.15.0
-folium==0.14.0
-geopy==2.3.0
-geopandas==0.12.2
-pandas==2.0.3
+streamlit
+streamlit-folium
+folium
+geopy
+geopandas
+pandas
