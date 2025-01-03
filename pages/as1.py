@@ -1,3 +1,4 @@
+# as1.py - Located in pages/as1.py
 import streamlit as st
 import folium
 from geopy.distance import geodesic
@@ -53,14 +54,12 @@ tabs = st.tabs(["Run Code", "Submit"])
 with tabs[0]:
     if st.button("Run Code"):
         try:
-            # Execute user code
-            exec_globals = {}
-            exec(code, exec_globals)
+            # Simulate user code execution
             distances = calculate_distances(coordinates)
 
             # Display Map
             map_obj = create_map(coordinates)
-            st_folium(map_obj, width=700, height=500)
+            st_map = st_folium(map_obj, width=700, height=500)
 
             # Display Distances
             st.write("### Calculated Distances:")
@@ -84,13 +83,13 @@ with tabs[1]:
                 "Assignment 1": total_score,
                 "Total": total_score
             }
-            
+
             # Save to CSV
             try:
                 df = pd.read_csv("grades/data_submission.csv")
             except FileNotFoundError:
                 df = pd.DataFrame(columns=["Full Name", "Student ID", "Assignment 1", "Total"])
-            
+
             df = df.append(new_entry, ignore_index=True)
             df.to_csv("grades/data_submission.csv", index=False)
             st.success("Submission successful!")
