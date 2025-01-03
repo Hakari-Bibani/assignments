@@ -8,6 +8,12 @@ import sys
 from io import StringIO
 import contextlib
 
+# Initialize session state for map and distances
+if 'map_obj' not in st.session_state:
+    st.session_state.map_obj = None
+if 'distances' not in st.session_state:
+    st.session_state.distances = None
+
 # Function to capture print outputs
 @contextlib.contextmanager
 def capture_output():
@@ -21,13 +27,24 @@ def capture_output():
 
 def execute_code(code_string):
     """Execute code and capture its output"""
-    # Create a string buffer to capture the output
     with capture_output() as s:
         try:
-            # Execute the code
-            exec(code_string)
+            # Create a namespace to store variables
+            namespace = {}
+            
+            # Execute the code in the namespace
+            exec(code_string, globals(), namespace)
+            
             # Get the printed output
             output = s.getvalue()
+            
+            # Look for map object and distances in the namespace
+            for var_name, var_value in namespace.items():
+                if isinstance(var_value, folium.Map):
+                    st.session_state.map_obj = var_value
+                elif var_name == 'distances' and isinstance(var_value, (list, tuple)):
+                    st.session_state.distances = var_value
+            
             return output, None
         except Exception as e:
             return None, str(e)
@@ -58,7 +75,7 @@ with st.expander("Assignment Details", expanded=True):
        - Point 2 and Point 3
        - Point 1 and Point 3
     
-    ### Sample Code Structure:
+    ### Sample Code:
     ```python
     import folium
     from geopy.distance import geodesic
@@ -73,11 +90,28 @@ with st.expander("Assignment Details", expanded=True):
     # Create map
     m = folium.Map(location=[36.5, 44], zoom_start=9)
     
-    # Add markers and calculate distances
-    # Your code here...
+    # Add markers
+    for i, coord in enumerate(coords, 1):
+        folium.Marker(
+            coord,
+            popup=f'Point {i}',
+            icon=folium.Icon(color='red')
+        ).add_to(m)
     
-    # Display map and distances
-    m  # In Colab, this displays the map
+    # Calculate distances
+    distances = [
+        geodesic(coords[0], coords[1]).kilometers,  # P1 to P2
+        geodesic(coords[1], coords[2]).kilometers,  # P2 to P3
+        geodesic(coords[0], coords[2]).kilometers   # P1 to P3
+    ]
+    
+    # Print distances
+    print(f"Distance P1-P2: {distances[0]:.2f} km")
+    print(f"Distance P2-P3: {distances[1]:.2f} km")
+    print(f"Distance P1-P3: {distances[2]:.2f} km")
+    
+    # The map will be displayed when you run this cell
+    m
     ```
     """)
 
@@ -86,8 +120,7 @@ st.markdown("### 📝 Code Cell")
 code = st.text_area(
     "",  # Empty label to mimic Colab
     height=200,
-    placeholder="# Enter your code here...",
-    help="Write or paste your Python code that implements the required functionality"
+    placeholder="# Enter your code here..."
 )
 
 # Tabbed interface for Run/Submit
@@ -98,7 +131,6 @@ with tabs[0]:
         if code.strip():
             # Create output cell styling
             st.markdown("### 📤 Output Cell")
-            output_placeholder = st.empty()
             
             # Execute the code
             output, error = execute_code(code)
@@ -116,25 +148,15 @@ with tabs[0]:
                 if output:
                     st.markdown(f"""
                     <div style='font-family: monospace; padding: 10px; 
-                                background-color: #f8f9fa; border-left: 3px solid #2196F3;'>
+                                background-color: #f8f9fa; border-left: 3px solid #2196F3; 
+                                white-space: pre-wrap;'>
                     {output}
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Try to get map object from the executed code's namespace
-                local_vars = {}
-                exec(code, globals(), local_vars)
-                
-                # Look for map object in local variables
-                map_obj = None
-                for var in local_vars:
-                    if isinstance(local_vars[var], folium.Map):
-                        map_obj = local_vars[var]
-                        break
-                
-                # Display map if found
-                if map_obj:
-                    st_folium(map_obj, width=800, height=500)
+                # Display map if available
+                if st.session_state.map_obj:
+                    st_folium(st.session_state.map_obj, width=800, height=500)
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
@@ -143,12 +165,7 @@ with tabs[1]:
         elif not code.strip():
             st.error("Please enter your code before submitting.")
         else:
-            # Save submission
             try:
-                # Execute code to get results
-                local_vars = {}
-                exec(code, globals(), local_vars)
-                
                 # Save to CSV
                 submission = {
                     'Full Name': name,
