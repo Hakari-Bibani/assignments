@@ -1,44 +1,42 @@
 import streamlit as st
 import pandas as pd
-from PIL import Image
 import os
-import sys
 from style import apply_style
+import importlib
 
-# Must be the first Streamlit command
+# Set page configuration
 st.set_page_config(page_title="ImpactHub", layout="wide")
 
-def load_module(module_path):
-    """Dynamically load a Python module"""
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("module", module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def load_module(module_name):
+    """Dynamically import module"""
+    try:
+        return importlib.import_module(module_name)
+    except ImportError:
+        st.error(f"Module {module_name} not found!")
+        return None
 
 def create_flip_card(title, description, key):
-    """Create a flip card with hover effect"""
+    """Create a flip card with CSS animation"""
     with st.container():
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.button(f"📚 {title}", key=f"btn_{key}"):
-                try:
-                    if "week" in title.lower():
-                        module = load_module(f"week{key}.py")
-                    else:
-                        module = load_module(f"quiz{key}.py")
-                    module.main()
-                except Exception as e:
-                    st.error(f"Error loading module: {str(e)}")
-        with col2:
-            st.markdown(f"<div class='flip-card-content'>{description}</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div class="flip-card" onclick="this.classList.toggle('flipped')" key="{key}">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                        <h3>{title}</h3>
+                    </div>
+                    <div class="flip-card-back">
+                        <p>{description}</p>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
 def main():
     # Apply custom styling
     apply_style()
     
-    # Title with custom styling from style.py
-    st.markdown("<div class='moving-title'>ImpactHub</div>", unsafe_allow_html=True)
+    # Title with animation
+    st.markdown('<h1 class="moving-title">ImpactHub</h1>', unsafe_allow_html=True)
     
     # Sidebar navigation
     st.sidebar.title("Navigation")
@@ -46,32 +44,43 @@ def main():
     
     if page == "Assignments":
         st.header("Weekly Assignments")
+        cols = st.columns(3)
         for week in range(1, 16):
-            create_flip_card(
-                f"Week {week}",
-                f"Assignment for Week {week}. Click to view and submit your work.",
-                week
-            )
-            
-    else:  # Quizzes page
-        st.header("Course Quizzes")
-        for quiz in range(1, 11):
-            create_flip_card(
-                f"Quiz {quiz}",
-                f"Quiz {quiz} assessment. Click to start the quiz.",
-                quiz
-            )
+            with cols[week % 3]:
+                create_flip_card(
+                    f"Week {week}",
+                    f"Click to view assignment for Week {week}",
+                    f"week_{week}"
+                )
+                if st.button(f"Open Week {week}", key=f"btn_week_{week}"):
+                    module = load_module(f"week{week}")
+                    if module:
+                        module.main()
     
+    else:  # Quizzes page
+        st.header("Available Quizzes")
+        cols = st.columns(2)
+        for quiz in range(1, 11):
+            with cols[quiz % 2]:
+                create_flip_card(
+                    f"Quiz {quiz}",
+                    f"Click to start Quiz {quiz}",
+                    f"quiz_{quiz}"
+                )
+                if st.button(f"Start Quiz {quiz}", key=f"btn_quiz_{quiz}"):
+                    module = load_module(f"quiz{quiz}")
+                    if module:
+                        module.main()
+
     # Initialize or load grades dataframe
-    if 'grades_df' not in st.session_state:
-        try:
-            st.session_state.grades_df = pd.read_csv('grades/data_submission.csv')
-        except FileNotFoundError:
-            st.session_state.grades_df = pd.DataFrame(columns=[
-                'student_id', 'assignment_id', 'submission_date', 'grade'
-            ])
-            os.makedirs('grades', exist_ok=True)
-            st.session_state.grades_df.to_csv('grades/data_submission.csv', index=False)
+    if not os.path.exists("grades"):
+        os.makedirs("grades")
+    
+    try:
+        grades_df = pd.read_csv("grades/data_submission.csv")
+    except FileNotFoundError:
+        grades_df = pd.DataFrame(columns=['student_id', 'assignment', 'submission_date', 'grade'])
+        grades_df.to_csv("grades/data_submission.csv", index=False)
 
 if __name__ == "__main__":
     main()
