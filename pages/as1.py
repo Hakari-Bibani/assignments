@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from grades.grade1 import calculate_grade
 from streamlit_folium import folium_static  # For displaying folium maps
+import re  # For extracting distances from print statements
 
 # Ensure the grades directory exists
 if not os.path.exists("grades"):
@@ -61,23 +62,46 @@ if st.button("Run Code"):
         st.error("Please paste your code before running.")
     else:
         try:
-            # Execute the student's code
-            exec(student_code, globals(), locals())
+            # Redirect print statements to capture distances
+            from io import StringIO
+            import sys
+            old_stdout = sys.stdout
+            sys.stdout = StringIO()
+
+            # Execute the student's code in a new namespace
+            namespace = {}
+            exec(student_code, namespace)
+
+            # Restore stdout and capture printed output
+            printed_output = sys.stdout.getvalue()
+            sys.stdout = old_stdout
+
             st.success("Code executed successfully!")
 
             # Display the map if it exists
-            if 'map' in locals():
+            if 'map' in namespace:
                 st.header("Map Visualization")
-                folium_static(locals()['map'])  # Display the folium map
+                folium_static(namespace['map'])  # Display the folium map
             else:
                 st.warning("No map found in the output. Ensure your code generates a 'map' variable using folium.")
 
+            # Extract distances from printed output
+            distances = {}
+            distance_pattern = r"Point \d to Point \d: (\d+\.\d+) km"
+            matches = re.findall(distance_pattern, printed_output)
+            if matches:
+                distances = {
+                    "Point 1 to Point 2": float(matches[0]),
+                    "Point 2 to Point 3": float(matches[1]),
+                    "Point 1 to Point 3": float(matches[2])
+                }
+
             # Display the distance report if it exists
-            if 'distances' in locals():
+            if distances:
                 st.header("Distance Report")
-                st.write(locals()['distances'])  # Display the distances
+                st.write(distances)
             else:
-                st.warning("No distance report found in the output. Ensure your code calculates and stores distances in a 'distances' variable.")
+                st.warning("No distance report found in the output. Ensure your code prints the distances in the format: 'Point X to Point Y: Z km'.")
         except ModuleNotFoundError as e:
             if "IPython" in str(e):
                 st.error("Error: The 'IPython' library is not supported in this environment. Please remove any 'IPython' dependencies from your code.")
