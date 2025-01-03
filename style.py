@@ -1,35 +1,38 @@
 import streamlit as st
 
 def apply_style():
-    """Apply custom styling to the application"""
+    # Custom CSS for styling
     st.markdown("""
-        <style>
-        /* Main title animation */
-        @keyframes moveText {
+    <style>
+        /* Moving title animation */
+        @keyframes moveTitle {
             0% { transform: translateX(-100%); }
-            50% { transform: translateX(20%); }
-            100% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
         
         .moving-title {
-            color: red;
-            font-size: 4em;
-            font-weight: bold;
-            animation: moveText 10s linear infinite;
+            overflow: hidden;
             white-space: nowrap;
-            margin-bottom: 2em;
+            margin-bottom: 2rem;
         }
         
-        /* Flip card styling */
+        .moving-title h1 {
+            display: inline-block;
+            color: red;
+            font-size: 3.5rem;
+            font-weight: bold;
+            animation: moveTitle 15s linear infinite;
+        }
+        
+        /* Flip Card Styling */
         .flip-card {
             background-color: transparent;
             width: 100%;
-            height: 200px;
+            height: 120px;
             perspective: 1000px;
-            margin-bottom: 20px;
-            cursor: pointer;
+            margin-bottom: 1rem;
         }
-        
+
         .flip-card-inner {
             position: relative;
             width: 100%;
@@ -37,60 +40,70 @@ def apply_style():
             text-align: center;
             transition: transform 0.8s;
             transform-style: preserve-3d;
+            cursor: pointer;
         }
-        
+
         .flip-card:hover .flip-card-inner {
             transform: rotateY(180deg);
         }
-        
+
         .flip-card-front, .flip-card-back {
             position: absolute;
             width: 100%;
             height: 100%;
+            -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 10px;
-            padding: 20px;
+            padding: 1rem;
         }
-        
+
         .flip-card-front {
-            background: linear-gradient(145deg, #2e7d32, #1b5e20);
+            background: linear-gradient(45deg, #1e88e5, #1565c0);
             color: white;
         }
-        
+
         .flip-card-back {
-            background: linear-gradient(145deg, #1976d2, #1565c0);
+            background: linear-gradient(45deg, #43a047, #2e7d32);
             color: white;
             transform: rotateY(180deg);
         }
-        
-        /* Custom button styling */
+
+        /* Button Styling */
         .stButton button {
             width: 100%;
-            margin-top: 10px;
-            background-color: #4CAF50;
+            background-color: #1565c0;
             color: white;
             border: none;
-            padding: 10px;
+            padding: 0.5rem;
             border-radius: 5px;
+            cursor: pointer;
             transition: background-color 0.3s;
         }
-        
+
         .stButton button:hover {
-            background-color: #45a049;
+            background-color: #0d47a1;
         }
-        
-        /* Sidebar styling */
-        .css-1d391kg {
-            background-color: #f5f5f5;
+
+        /* Tab Styling */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2rem;
         }
-        
-        /* Headers styling */
-        h1, h2, h3 {
-            font-family: 'Arial', sans-serif;
-            margin-bottom: 1em;
+
+        .stTabs [data-baseweb="tab"] {
+            height: 4rem;
+            white-space: pre-wrap;
+            background-color: #f0f2f6;
+            border-radius: 4px;
+            color: #0d47a1;
+            font-weight: bold;
         }
-        </style>
+
+        .stTabs [aria-selected="true"] {
+            background-color: #1565c0;
+            color: white;
+        }
+    </style>
     """, unsafe_allow_html=True)
