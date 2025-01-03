@@ -1,29 +1,41 @@
 import streamlit as st
 
-def apply_styles():
-    st.markdown("""
+def apply_style():
+    # Custom CSS for the main page
+    st.markdown(
+        """
         <style>
-        body {
-            font-family: 'Tiranti Solid Std Regular', sans-serif;
+        @keyframes moveTitle {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(20px); }
+            100% { transform: translateX(0); }
         }
         h1 {
-            text-align: center;
-            font-size: 3rem;
             color: red;
+            font-size: 3.5em;
+            animation: moveTitle 2s infinite;
+            text-align: center;
         }
-        .st-expander {
-            background-color: #f5f5f5;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+        .stExpander {
+            background-color: #f0f2f6;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        .st-button {
-            background-color: #007BFF;
+        .stButton button {
+            background-color: #4CAF50;
             color: white;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
             border: none;
-            border-radius: 4px;
-            font-size: 1em;
+            cursor: pointer;
+        }
+        .stButton button:hover {
+            background-color: #45a049;
         }
         </style>
-    """, unsafe_allow_html=True)
-
-apply_styles()
+        """,
+        unsafe_allow_html=True,
+    )
