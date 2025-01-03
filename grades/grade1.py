@@ -1,4 +1,9 @@
-# grade1.py
+import os
+import sys
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+grades_dir = os.path.join(parent_dir, 'grades')
+sys.path.append(grades_dir)
+from grade1 import grade_assignment
 import ast
 from geopy.distance import geodesic
 
