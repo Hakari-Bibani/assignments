@@ -1,69 +1,57 @@
 import streamlit as st
-import importlib
-import os
-from style import apply_styles
-
-def load_page(page_name):
-    """Dynamically import and run the specified page module"""
-    try:
-        module = importlib.import_module(page_name)
-        module.main()
-    except ImportError:
-        st.error(f"Error: Could not load {page_name}")
-
-def create_flip_card(title, description, page_name):
-    """Create a flip card with navigation"""
-    with st.container():
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            # Card front
-            with st.expander(title, expanded=True):
-                st.write(description)
-                
-                # Navigation button
-                if st.button(f"Go to {title}", key=f"btn_{page_name}"):
-                    st.session_state.current_page = page_name
-                    st.experimental_rerun()
+from streamlit_card import card
+import webbrowser
+from style import apply_style
 
 def main():
-    # Initialize session state for navigation
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = 'main'
-
-    # Apply custom styles
-    apply_styles()
-
-    if st.session_state.current_page == 'main':
-        st.title("ImpactHub")
-        
-        # Create two columns for Assignments and Quizzes
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Assignments")
-            for i in range(1, 16):
-                create_flip_card(
-                    f"Assignment {i}",
-                    f"Click to view and complete Assignment {i}",
-                    f"as{i}"
+    apply_style()
+    
+    st.title("ImpactHub")
+    
+    # Create two columns for Assignments and Quizzes
+    col1, col2 = st.columns(2)
+    
+    # Assignments section
+    with col1:
+        st.header("Assignments")
+        for i in range(1, 16):
+            with st.expander(f"Assignment {i}"):
+                card(
+                    title=f"Assignment {i}",
+                    text=f"Click to go to Assignment {i}",
+                    image="",
+                    styles={
+                        "card": {
+                            "width": "100%",
+                            "height": "200px",
+                            "border-radius": "10px",
+                            "box-shadow": "0 0 10px rgba(0,0,0,0.5)",
+                        }
+                    }
                 )
-        
-        with col2:
-            st.subheader("Quizzes")
-            for i in range(1, 11):
-                create_flip_card(
-                    f"Quiz {i}",
-                    f"Click to attempt Quiz {i}",
-                    f"quiz{i}"
+                if st.button(f"Go to Assignment {i}", key=f"as{i}"):
+                    webbrowser.open(f"as{i}.py")
+
+    # Quizzes section
+    with col2:
+        st.header("Quizzes")
+        for i in range(1, 11):
+            with st.expander(f"Quiz {i}"):
+                card(
+                    title=f"Quiz {i}",
+                    text=f"Click to go to Quiz {i}",
+                    image="",
+                    styles={
+                        "card": {
+                            "width": "100%",
+                            "height": "200px",
+                            "border-radius": "10px",
+                            "box-shadow": "0 0 10px rgba(0,0,0,0.5)",
+                        }
+                    }
                 )
-    else:
-        # Load the selected page
-        load_page(st.session_state.current_page)
-        
-        # Add back button
-        if st.button("Back to Main Page"):
-            st.session_state.current_page = 'main'
-            st.experimental_rerun()
+                if st.button(f"Go to Quiz {i}", key=f"quiz{i}"):
+                    webbrowser.open(f"quiz{i}.py")
 
 if __name__ == "__main__":
     main()
