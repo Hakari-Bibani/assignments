@@ -59,7 +59,7 @@ with tabs[0]:
 
             # Display Map
             map_obj = create_map(coordinates)
-            st_map = st_folium(map_obj, width=700, height=500)
+            st_map = st_folium(map_obj, width=700, height=500, returned_objects=[])
 
             # Display Distances
             st.write("### Calculated Distances:")
