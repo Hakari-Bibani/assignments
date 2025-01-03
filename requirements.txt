@@ -4,3 +4,4 @@ streamlit
 pandas
 numpy
 geopandas
+streamlit-folium==0.15.1
