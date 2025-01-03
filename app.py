@@ -1,77 +1,34 @@
 import streamlit as st
-import os
-import style
-from PIL import Image
+from style import apply_style  # Import custom styling
 
-def load_assignments():
-    assignments = []
-    for i in range(1, 16):
-        assignments.append({
-            'title': f'Assignment {i}',
-            'description': f'Assignment {i} description',
-            'link': f'Assignment_{i}'
-        })
-    return assignments
+# Apply custom styling
+apply_style()
 
-def load_quizzes():
-    quizzes = []
-    for i in range(1, 11):
-        quizzes.append({
-            'title': f'Quiz {i}',
-            'description': f'Quiz {i} description',
-            'link': f'Quiz_{i}'
-        })
-    return quizzes
+# Main page layout
+st.title("Online Assignments and Quizzes Manager")
 
-def create_flip_card(title, description, link):
-    with st.container():
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.markdown(f'''
-                <div class="flip-card">
-                    <div class="flip-card-inner">
-                        <div class="flip-card-front">
-                            <h3>{title}</h3>
-                        </div>
-                        <div class="flip-card-back">
-                            <p>{description}</p>
-                        </div>
-                    </div>
-                </div>
-            ''', unsafe_allow_html=True)
-        with col2:
-            if st.button(f'Go to {title}', key=link):
-                st.switch_page(f"pages/{link.lower()}.py")
+# Flip cards for Assignments
+st.header("Assignments")
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("Assignment 1"):
+        st.switch_page("pages/as1.py")
+with col2:
+    if st.button("Assignment 2"):
+        st.switch_page("pages/as2.py")
+# Add more columns/buttons for assignments 3-15...
 
-def main():
-    st.set_page_config(page_title="ImpactHub", layout="wide")
-    style.apply_styles()
-    
-    # Title with animation
-    st.markdown(style.get_animated_title(), unsafe_allow_html=True)
-    
-    # Create two columns for Assignments and Quizzes
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.header("Assignments")
-        assignments = load_assignments()
-        for assignment in assignments:
-            create_flip_card(
-                assignment['title'],
-                assignment['description'],
-                assignment['link']
-            )
-    
-    with col2:
-        st.header("Quizzes")
-        quizzes = load_quizzes()
-        for quiz in quizzes:
-            create_flip_card(
-                quiz['title'],
-                quiz['description'],
-                quiz['link']
-            )
+# Flip cards for Quizzes
+st.header("Quizzes")
+col4, col5, col6 = st.columns(3)
+with col4:
+    if st.button("Quiz 1"):
+        st.switch_page("pages/quiz1.py")
+with col5:
+    if st.button("Quiz 2"):
+        st.switch_page("pages/quiz2.py")
+# Add more columns/buttons for quizzes 3-10...
 
-if __name__ == "__main__":
-    main()
+# Footer
+st.markdown("---")
+st.markdown("© 2023 Your Organization Name")
