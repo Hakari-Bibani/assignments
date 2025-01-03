@@ -3,25 +3,17 @@ import streamlit as st
 import pandas as pd
 import sys
 import io
-import json
 import os
-import importlib.util
 import folium
 from geopy.distance import geodesic
 
-# Import grade1 from the grades directory
 def import_grader():
-    # Construct the path to grade1.py
     grade_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'grades', 'grade1.py')
-    
-    # Import the module dynamically
     spec = importlib.util.spec_from_file_location("grade1", grade_path)
     grade_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(grade_module)
-    
     return grade_module.grade_assignment
 
-# Get the grading function
 grade_assignment = import_grader()
 
 def main():
@@ -66,10 +58,11 @@ def main():
         ```
         """)
 
-    # Add template code
+    # Code template without IPython dependencies
     st.subheader("Code Template")
     with st.expander("Click to see template code", expanded=False):
         st.code("""
+# Required imports (already available in the environment)
 import folium
 from geopy.distance import geodesic
 
@@ -117,8 +110,6 @@ dist_1_3 = geodesic(point1, point3).kilometers
 print(f"Distance between Point 1 and Point 2: {dist_1_2:.2f} km")
 print(f"Distance between Point 2 and Point 3: {dist_2_3:.2f} km")
 print(f"Distance between Point 1 and Point 3: {dist_1_3:.2f} km")
-
-# The map will be displayed automatically in Streamlit
 """)
 
     # Code Submission
@@ -135,42 +126,38 @@ print(f"Distance between Point 1 and Point 3: {dist_1_3:.2f} km")
     # Run Code Logic
     if run_button and code:
         try:
-            # Create a clean namespace for execution
+            # Set up the execution environment
             namespace = {
                 'folium': folium,
                 'geodesic': geodesic,
                 'print': print,
-                '__name__': '__main__'
             }
             
             # Capture output
-            old_stdout = sys.stdout
-            redirected_output = io.StringIO()
-            sys.stdout = redirected_output
+            output_buffer = io.StringIO()
+            sys.stdout = output_buffer
 
             # Execute the code
             exec(code, namespace)
             
             # Restore stdout
-            sys.stdout = old_stdout
+            sys.stdout = sys.__stdout__
             
             # Display output
             st.subheader("Output:")
-            output = redirected_output.getvalue()
+            output = output_buffer.getvalue()
             if output:
                 st.text(output)
 
-            # Display map if 'm' variable exists
+            # Display map if it exists
             if 'm' in namespace and isinstance(namespace['m'], folium.Map):
-                st.subheader("Map:")
-                map_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "temp_map.html")
-                namespace['m'].save(map_path)
-                with open(map_path, "r") as f:
-                    st.components.v1.html(f.read(), height=500)
-                os.remove(map_path)
+                st.subheader("Map Visualization:")
+                map_data = namespace['m']._repr_html_()
+                st.components.v1.html(map_data, height=500)
 
         except Exception as e:
             st.error(f"Error executing code: {str(e)}")
+            sys.stdout = sys.__stdout__  # Ensure stdout is restored
 
     # Submit Logic
     if submit_button:
@@ -178,43 +165,46 @@ print(f"Distance between Point 1 and Point 3: {dist_1_3:.2f} km")
             st.error("Please fill in all fields before submitting.")
             return
 
-        # Grade the submission
-        grade, feedback = grade_assignment(code)
-        
-        # Display results
-        st.success(f"Assignment submitted successfully! Grade: {grade}/100")
-        st.write("Feedback:", feedback)
-        
-        # Save grade to CSV
-        grades_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'grades')
-        csv_path = os.path.join(grades_dir, 'data_submission.csv')
-        
         try:
-            df = pd.read_csv(csv_path)
-        except FileNotFoundError:
-            # Create new DataFrame if file doesn't exist
-            columns = ['Full name', 'student ID'] + [f'assignment{i}' for i in range(1, 16)] + \
-                     [f'quiz{i}' for i in range(1, 11)] + ['total']
-            df = pd.DataFrame(columns=columns)
-        
-        # Update or add new row
-        student_row = df[df['student ID'] == student_id]
-        if len(student_row) > 0:
-            df.loc[df['student ID'] == student_id, 'assignment1'] = grade
-        else:
-            new_row = pd.DataFrame({
-                'Full name': [full_name],
-                'student ID': [student_id],
-                'assignment1': [grade]
-            })
-            df = pd.concat([df, new_row], ignore_index=True)
-        
-        # Calculate total
-        numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
-        df['total'] = df[numeric_columns].sum(axis=1)
-        
-        # Save to CSV
-        df.to_csv(csv_path, index=False)
+            # Grade the submission
+            grade, feedback = grade_assignment(code)
+            
+            # Display results
+            st.success(f"Assignment submitted successfully! Grade: {grade}/100")
+            st.write("Feedback:", feedback)
+            
+            # Save grade to CSV
+            grades_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'grades')
+            csv_path = os.path.join(grades_dir, 'data_submission.csv')
+            
+            try:
+                df = pd.read_csv(csv_path)
+            except FileNotFoundError:
+                columns = ['Full name', 'student ID'] + \
+                         [f'assignment{i}' for i in range(1, 16)] + \
+                         [f'quiz{i}' for i in range(1, 11)] + ['total']
+                df = pd.DataFrame(columns=columns)
+            
+            # Update or add new row
+            if student_id in df['student ID'].values:
+                df.loc[df['student ID'] == student_id, 'assignment1'] = grade
+            else:
+                new_row = pd.DataFrame({
+                    'Full name': [full_name],
+                    'student ID': [student_id],
+                    'assignment1': [grade]
+                })
+                df = pd.concat([df, new_row], ignore_index=True)
+            
+            # Calculate total
+            numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
+            df['total'] = df[numeric_columns].sum(axis=1)
+            
+            # Save to CSV
+            df.to_csv(csv_path, index=False)
+
+        except Exception as e:
+            st.error(f"Error during submission: {str(e)}")
 
 if __name__ == "__main__":
     main()
