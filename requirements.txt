@@ -3,4 +3,4 @@ geopy
 streamlit
 pandas
 numpy
-importlib-metadata
+geopandas
