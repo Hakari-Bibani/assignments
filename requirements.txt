@@ -6,5 +6,6 @@ geopy
 folium
 geopandas
 streamlit-folium
-geopy
-IPython
+geopandas
+branca
+matplotlib
