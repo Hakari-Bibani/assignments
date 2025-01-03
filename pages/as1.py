@@ -1,9 +1,8 @@
 import streamlit as st
-import subprocess
-import sys
 import pandas as pd
 import os
-from grades.grade1 import calculate_grade  # Updated import statement
+from grades.grade1 import calculate_grade
+from streamlit_folium import folium_static  # For displaying folium maps
 
 # Ensure the grades directory exists
 if not os.path.exists("grades"):
@@ -63,8 +62,27 @@ if st.button("Run Code"):
     else:
         try:
             # Execute the student's code
-            exec(student_code)
+            exec(student_code, globals(), locals())
             st.success("Code executed successfully!")
+
+            # Display the map if it exists
+            if 'map' in locals():
+                st.header("Map Visualization")
+                folium_static(locals()['map'])  # Display the folium map
+            else:
+                st.warning("No map found in the output. Ensure your code generates a 'map' variable using folium.")
+
+            # Display the distance report if it exists
+            if 'distances' in locals():
+                st.header("Distance Report")
+                st.write(locals()['distances'])  # Display the distances
+            else:
+                st.warning("No distance report found in the output. Ensure your code calculates and stores distances in a 'distances' variable.")
+        except ModuleNotFoundError as e:
+            if "IPython" in str(e):
+                st.error("Error: The 'IPython' library is not supported in this environment. Please remove any 'IPython' dependencies from your code.")
+            else:
+                st.error(f"Error: {e}")
         except Exception as e:
             st.error(f"Error executing code: {e}")
 
