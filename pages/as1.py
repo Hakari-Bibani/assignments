@@ -3,9 +3,15 @@ import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import folium_static
+import os
 import sys
-sys.path.append('../grades')
-from grade1 import grade_assignment
+
+# Add the project root to the Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.append(project_root)
+
+from utils.grading import grade_assignment
 
 def run_student_code(code_string):
     try:
@@ -87,9 +93,12 @@ def app():
                 }
                 df = pd.DataFrame(submission_data)
                 
+                # Create data directory if it doesn't exist
+                os.makedirs('data', exist_ok=True)
+                
                 try:
                     # Try to read existing CSV file
-                    existing_df = pd.read_csv('submissions.csv')
+                    existing_df = pd.read_csv('data/submissions.csv')
                     # Append new submission
                     updated_df = pd.concat([existing_df, df], ignore_index=True)
                 except FileNotFoundError:
@@ -97,7 +106,7 @@ def app():
                     updated_df = df
                 
                 # Save to CSV
-                updated_df.to_csv('submissions.csv', index=False)
+                updated_df.to_csv('data/submissions.csv', index=False)
                 
                 st.success(f"Assignment submitted successfully! Grade: {grade}/100")
             else:
