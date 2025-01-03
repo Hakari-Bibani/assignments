@@ -4,6 +4,9 @@ import pandas as pd
 import sys
 import io
 from pathlib import Path
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent / 'grades'))
 from grade1 import grade_assignment
 
 def main():
