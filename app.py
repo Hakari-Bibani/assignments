@@ -1,104 +1,69 @@
 import streamlit as st
 import importlib
-from style import apply_style
+import os
+from style import apply_styles
 
-def load_page(page_name, page_number):
-    """Load assignment or quiz page"""
-    if page_name == 'assignment':
-        module_name = f'as{page_number}'
-    else:  # quiz
-        module_name = f'quiz{page_number}'
-    
+def load_page(page_name):
+    """Dynamically import and run the specified page module"""
     try:
-        # Clear the main page content
-        st.empty()
-        
-        # Import and display the selected module
-        module = importlib.import_module(module_name)
-        
-        # Add a back button
-        if st.button("← Back to Main Page"):
-            st.session_state.current_page = 'main'
-            st.experimental_rerun()
-            
-        # Display the module content
-        if hasattr(module, 'main'):
-            module.main()
+        module = importlib.import_module(page_name)
+        module.main()
     except ImportError:
-        st.error(f"Unable to load {module_name}. Make sure the file exists.")
+        st.error(f"Error: Could not load {page_name}")
 
-def create_flip_card(title, description, page_type, number):
+def create_flip_card(title, description, page_name):
     """Create a flip card with navigation"""
     with st.container():
         col1, col2 = st.columns([3, 1])
-        
         with col1:
-            st.markdown(f"""
-            <div class='flip-card' id='{page_type}_{number}'>
-                <div class='flip-card-inner'>
-                    <div class='flip-card-front'>
-                        <h3>{title}</h3>
-                    </div>
-                    <div class='flip-card-back'>
-                        <p>{description}</p>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            if st.button(f"Open {title}", key=f"btn_{page_type}_{number}"):
-                st.session_state.current_page = f"{page_type}_{number}"
-                st.experimental_rerun()
-
-def main_page():
-    """Display the main page with flip cards"""
-    # Apply custom styling
-    apply_style()
-    
-    # Title with animation
-    st.markdown("""
-        <div class="moving-title">
-            <h1>ImpactHub</h1>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Tabs for Assignments and Quizzes
-    tab1, tab2 = st.tabs(["Assignments", "Quizzes"])
-
-    with tab1:
-        st.markdown("## Assignments")
-        for i in range(1, 16):
-            create_flip_card(
-                f"Assignment {i}",
-                f"Click to view and submit Assignment {i}",
-                "assignment",
-                i
-            )
-
-    with tab2:
-        st.markdown("## Quizzes")
-        for i in range(1, 11):
-            create_flip_card(
-                f"Quiz {i}",
-                f"Click to take Quiz {i}",
-                "quiz",
-                i
-            )
+            # Card front
+            with st.expander(title, expanded=True):
+                st.write(description)
+                
+                # Navigation button
+                if st.button(f"Go to {title}", key=f"btn_{page_name}"):
+                    st.session_state.current_page = page_name
+                    st.experimental_rerun()
 
 def main():
-    """Main application logic"""
-    # Initialize session state
+    # Initialize session state for navigation
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 'main'
-    
-    # Handle navigation
+
+    # Apply custom styles
+    apply_styles()
+
     if st.session_state.current_page == 'main':
-        main_page()
+        st.title("ImpactHub")
+        
+        # Create two columns for Assignments and Quizzes
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Assignments")
+            for i in range(1, 16):
+                create_flip_card(
+                    f"Assignment {i}",
+                    f"Click to view and complete Assignment {i}",
+                    f"as{i}"
+                )
+        
+        with col2:
+            st.subheader("Quizzes")
+            for i in range(1, 11):
+                create_flip_card(
+                    f"Quiz {i}",
+                    f"Click to attempt Quiz {i}",
+                    f"quiz{i}"
+                )
     else:
-        # Parse the current page to get type and number
-        page_type, page_number = st.session_state.current_page.split('_')
-        load_page(page_type, page_number)
+        # Load the selected page
+        load_page(st.session_state.current_page)
+        
+        # Add back button
+        if st.button("Back to Main Page"):
+            st.session_state.current_page = 'main'
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
