@@ -6,3 +6,5 @@ geopy
 folium
 geopandas
 shapely
+branca
+jinja2
