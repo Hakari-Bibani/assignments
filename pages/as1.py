@@ -1,129 +1,173 @@
-# as1.py - Located in pages/as1.py
+# pages/as1.py
 import streamlit as st
 import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
+import sys
+from io import StringIO
+import contextlib
 
-# Constants
-COORDINATES = [
-    (36.325735, 43.928414),  # Point 1
-    (36.393432, 44.586781),  # Point 2
-    (36.660477, 43.840174)   # Point 3
-]
-CSV_FILE = "grades/data_submission.csv"
-
-# Function to calculate distances between points
-def calculate_distances(coords):
-    """Calculate distances between three points."""
-    point1, point2, point3 = coords
-    dist1_2 = geodesic(point1, point2).kilometers
-    dist2_3 = geodesic(point2, point3).kilometers
-    dist1_3 = geodesic(point1, point3).kilometers
-    return dist1_2, dist2_3, dist1_3
-
-# Function to generate a folium map with popups showing distances
-def create_map_with_popups(coords):
-    """Create a Folium map with markers and popups showing distances."""
-    # Initialize the map
-    m = folium.Map(location=[36.5, 44], zoom_start=8, tiles="cartodbpositron")
-
-    # Calculate distances
-    dist1_2 = geodesic(coords[0], coords[1]).kilometers
-    dist2_3 = geodesic(coords[1], coords[2]).kilometers
-    dist1_3 = geodesic(coords[0], coords[2]).kilometers
-
-    # Add markers with popups
-    folium.Marker(
-        location=coords[0],
-        popup=f"Point 1<br>Distance to Point 2: {dist1_2:.2f} km<br>Distance to Point 3: {dist1_3:.2f} km",
-        icon=folium.Icon(color="blue", icon="info-sign")
-    ).add_to(m)
-
-    folium.Marker(
-        location=coords[1],
-        popup=f"Point 2<br>Distance to Point 1: {dist1_2:.2f} km<br>Distance to Point 3: {dist2_3:.2f} km",
-        icon=folium.Icon(color="green", icon="info-sign")
-    ).add_to(m)
-
-    folium.Marker(
-        location=coords[2],
-        popup=f"Point 3<br>Distance to Point 1: {dist1_3:.2f} km<br>Distance to Point 2: {dist2_3:.2f} km",
-        icon=folium.Icon(color="red", icon="info-sign")
-    ).add_to(m)
-
-    # Add a polyline to connect the points
-    folium.PolyLine(
-        locations=coords,
-        color="blue",
-        weight=3,
-        opacity=0.8,
-        tooltip="Path between points"
-    ).add_to(m)
-
-    return m
-
-# Function to save submission data to CSV
-def save_submission(name, student_id, score):
-    """Save student submission data to a CSV file."""
+# Function to capture print outputs
+@contextlib.contextmanager
+def capture_output():
+    new_out = StringIO()
+    old_out = sys.stdout
     try:
-        df = pd.read_csv(CSV_FILE)
-    except FileNotFoundError:
-        df = pd.DataFrame(columns=["Full Name", "Student ID", "Assignment 1", "Total"])
+        sys.stdout = new_out
+        yield sys.stdout
+    finally:
+        sys.stdout = old_out
 
-    new_entry = {
-        "Full Name": name,
-        "Student ID": student_id,
-        "Assignment 1": score,
-        "Total": score
-    }
-    df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
-    df.to_csv(CSV_FILE, index=False)
+def execute_code(code_string):
+    """Execute code and capture its output"""
+    # Create a string buffer to capture the output
+    with capture_output() as s:
+        try:
+            # Execute the code
+            exec(code_string)
+            # Get the printed output
+            output = s.getvalue()
+            return output, None
+        except Exception as e:
+            return None, str(e)
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 
 # Student Information
-name = st.text_input("Full Name", placeholder="Enter your full name")
-email = st.text_input("Email", placeholder="Enter your email")
-student_id = st.text_input("Student ID (Optional)", placeholder="Optional")
+name = st.text_input("Full Name")
+email = st.text_input("Email")
+student_id = st.text_input("Student ID (Optional)")
 
-# Accordion for Assignment Details
-with st.expander("Assignment Details"):
-    st.write(
-        "In this assignment, you will plot three geographical coordinates on a map "
-        "and calculate distances between them. Paste your Python code below, run it, "
-        "and submit your results."
-    )
+# Assignment Details Accordion
+with st.expander("Assignment Details", expanded=True):
+    st.markdown("""
+    ### Objective:
+    Write a Python script to plot three geographical coordinates on a map and calculate distances between them.
+    
+    ### Coordinates:
+    - Point 1: (36.325735, 43.928414)
+    - Point 2: (36.393432, 44.586781)
+    - Point 3: (36.660477, 43.840174)
+    
+    ### Expected Output:
+    1. A map showing all three points with markers
+    2. Distance calculations between:
+       - Point 1 and Point 2
+       - Point 2 and Point 3
+       - Point 1 and Point 3
+    
+    ### Sample Code Structure:
+    ```python
+    import folium
+    from geopy.distance import geodesic
+    
+    # Define coordinates
+    coords = [
+        (36.325735, 43.928414),  # Point 1
+        (36.393432, 44.586781),  # Point 2
+        (36.660477, 43.840174)   # Point 3
+    ]
+    
+    # Create map
+    m = folium.Map(location=[36.5, 44], zoom_start=9)
+    
+    # Add markers and calculate distances
+    # Your code here...
+    
+    # Display map and distances
+    m  # In Colab, this displays the map
+    ```
+    """)
 
-# Code Input
-code = st.text_area("Paste your Python code here:", height=200, placeholder="Paste your code here...")
+# Code Input with Colab-like styling
+st.markdown("### 📝 Code Cell")
+code = st.text_area(
+    "",  # Empty label to mimic Colab
+    height=200,
+    placeholder="# Enter your code here...",
+    help="Write or paste your Python code that implements the required functionality"
+)
 
-# Run Code Button
-if st.button("Run Code"):
-    try:
-        # Simulate user code execution
-        distances = calculate_distances(COORDINATES)
+# Tabbed interface for Run/Submit
+tabs = st.tabs(["Run Cell", "Submit Assignment"])
 
-        # Display Map
-        st.write("### Map:")
-        map_obj = create_map_with_popups(COORDINATES)
-        st_folium(map_obj, width=800, height=600, returned_objects=[])
+with tabs[0]:
+    if st.button("▶ Run", type="primary"):
+        if code.strip():
+            # Create output cell styling
+            st.markdown("### 📤 Output Cell")
+            output_placeholder = st.empty()
+            
+            # Execute the code
+            output, error = execute_code(code)
+            
+            if error:
+                # Display error in red, similar to Colab
+                st.markdown(f"""
+                <div style='color: red; font-family: monospace; padding: 10px; 
+                            background-color: #f8f9fa; border-left: 3px solid red;'>
+                {error}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # Display regular output if any
+                if output:
+                    st.markdown(f"""
+                    <div style='font-family: monospace; padding: 10px; 
+                                background-color: #f8f9fa; border-left: 3px solid #2196F3;'>
+                    {output}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Try to get map object from the executed code's namespace
+                local_vars = {}
+                exec(code, globals(), local_vars)
+                
+                # Look for map object in local variables
+                map_obj = None
+                for var in local_vars:
+                    if isinstance(local_vars[var], folium.Map):
+                        map_obj = local_vars[var]
+                        break
+                
+                # Display map if found
+                if map_obj:
+                    st_folium(map_obj, width=800, height=500)
 
-        # Display Distances
-        st.write("### Calculated Distances:")
-        st.write(f"Distance between Point 1 and Point 2: {distances[0]:.2f} km")
-        st.write(f"Distance between Point 2 and Point 3: {distances[1]:.2f} km")
-        st.write(f"Distance between Point 1 and Point 3: {distances[2]:.2f} km")
-    except Exception as e:
-        st.error(f"Error in executing code: {e}")
-
-# Submit Button
-if st.button("Submit"):
-    if not name or not email:
-        st.error("Name and Email are required to submit.")
-    else:
-        distances = calculate_distances(COORDINATES)
-        total_score = sum(distances)  # Placeholder for grading logic
-        save_submission(name, student_id, total_score)
-        st.success("Submission successful!")
+with tabs[1]:
+    if st.button("Submit", type="primary"):
+        if not name or not email:
+            st.error("Please fill in Name and Email before submitting.")
+        elif not code.strip():
+            st.error("Please enter your code before submitting.")
+        else:
+            # Save submission
+            try:
+                # Execute code to get results
+                local_vars = {}
+                exec(code, globals(), local_vars)
+                
+                # Save to CSV
+                submission = {
+                    'Full Name': name,
+                    'Student ID': student_id if student_id else 'N/A',
+                    'Email': email,
+                    'Assignment 1': 100,  # Placeholder score
+                    'Total': 100  # Placeholder total
+                }
+                
+                try:
+                    df = pd.read_csv('grades/data_submission.csv')
+                except FileNotFoundError:
+                    df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
+                
+                df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                df.to_csv('grades/data_submission.csv', index=False)
+                
+                st.success("Assignment submitted successfully!")
+                st.balloons()
+                
+            except Exception as e:
+                st.error(f"Error submitting assignment: {str(e)}")
