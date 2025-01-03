@@ -1,27 +1,58 @@
 import streamlit as st
-from style import apply_style  # Import custom styling
+import base64
+from pathlib import Path
 
-# Apply custom styling
-apply_style()
+def load_local_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-# Main page title
-st.title("ImpactHub")
+def create_flip_card(title, description, link):
+    card_html = f'''
+    <div class="flip-card">
+        <div class="flip-card-inner">
+            <div class="flip-card-front">
+                <h2>{title}</h2>
+            </div>
+            <div class="flip-card-back">
+                <p>{description}</p>
+                <div class="tab-navigation">
+                    <a href="{link}" target="_self" class="tab-button">Go to {title}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    '''
+    return card_html
 
-# Display assignments and quizzes in flip cards
-st.header("Assignments")
-assignment_cols = st.columns(3)  # Display 3 assignments per row
-for i in range(1, 16):
-    with assignment_cols[(i - 1) % 3]:
-        with st.expander(f"Assignment {i}"):
-            st.write(f"Description for Assignment {i}")
-            if st.button(f"Go to Assignment {i}", key=f"as{i}"):
-                st.switch_page(f"pages/as{i}.py")  # Navigate to the assignment page
+def main():
+    st.set_page_config(page_title="ImpactHub", layout="wide")
+    load_local_css("style.py")
 
-st.header("Quizzes")
-quiz_cols = st.columns(3)  # Display 3 quizzes per row
-for i in range(1, 11):
-    with quiz_cols[(i - 1) % 3]:
-        with st.expander(f"Quiz {i}"):
-            st.write(f"Description for Quiz {i}")
-            if st.button(f"Go to Quiz {i}", key=f"quiz{i}"):
-                st.switch_page(f"pages/quiz{i}.py")  # Navigate to the quiz page
+    # Title with animation
+    st.markdown('<h1 class="moving-title">ImpactHub</h1>', unsafe_allow_html=True)
+
+    # Create two columns for Assignments and Quizzes
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("<h2>Assignments</h2>", unsafe_allow_html=True)
+        for i in range(1, 16):
+            card_html = create_flip_card(
+                f"Assignment {i}",
+                f"Click to access Assignment {i}",
+                f"/as{i}"
+            )
+            st.markdown(card_html, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("<h2>Quizzes</h2>", unsafe_allow_html=True)
+        for i in range(1, 11):
+            card_html = create_flip_card(
+                f"Quiz {i}",
+                f"Click to access Quiz {i}",
+                f"/quiz{i}"
+            )
+            st.markdown(card_html, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
