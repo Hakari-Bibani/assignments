@@ -5,6 +5,9 @@ import os
 import sys
 from style import apply_style
 
+# Must be the first Streamlit command
+st.set_page_config(page_title="ImpactHub", layout="wide")
+
 def load_module(module_path):
     """Dynamically load a Python module"""
     import importlib.util
@@ -33,9 +36,6 @@ def create_flip_card(title, description, key):
 def main():
     # Apply custom styling
     apply_style()
-    
-    # Set page config
-    st.set_page_config(page_title="ImpactHub", layout="wide")
     
     # Title with custom styling from style.py
     st.markdown("<div class='moving-title'>ImpactHub</div>", unsafe_allow_html=True)
