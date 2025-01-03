@@ -1,102 +1,77 @@
 import streamlit as st
-from style import apply_style
-import importlib
+import pandas as pd
+from PIL import Image
 import os
+import sys
+from style import apply_style
 
-# Set page configuration
-st.set_page_config(page_title="ImpactHub", layout="wide")
+def load_module(module_path):
+    """Dynamically load a Python module"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("module", module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
-def load_module(module_name):
-    """Dynamically import week or quiz modules"""
-    try:
-        return importlib.import_module(module_name)
-    except ImportError:
-        st.error(f"Module {module_name} not found!")
-        return None
+def create_flip_card(title, description, key):
+    """Create a flip card with hover effect"""
+    with st.container():
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button(f"📚 {title}", key=f"btn_{key}"):
+                try:
+                    if "week" in title.lower():
+                        module = load_module(f"week{key}.py")
+                    else:
+                        module = load_module(f"quiz{key}.py")
+                    module.main()
+                except Exception as e:
+                    st.error(f"Error loading module: {str(e)}")
+        with col2:
+            st.markdown(f"<div class='flip-card-content'>{description}</div>", unsafe_allow_html=True)
 
 def main():
     # Apply custom styling
     apply_style()
     
-    # Create animated title using HTML and CSS
-    st.markdown(
-        """
-        <div class="moving-title">
-            <h1>ImpactHub</h1>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # Create sidebar navigation
+    # Set page config
+    st.set_page_config(page_title="ImpactHub", layout="wide")
+    
+    # Title with custom styling from style.py
+    st.markdown("<div class='moving-title'>ImpactHub</div>", unsafe_allow_html=True)
+    
+    # Sidebar navigation
     st.sidebar.title("Navigation")
-    section = st.sidebar.radio("Select Section:", ["Assignments", "Quizzes"])
-
-    if section == "Assignments":
-        weeks = [f"Week {i}" for i in range(1, 16)]
-        selected_week = st.sidebar.selectbox("Select Week:", weeks)
-        
-        if selected_week:
-            week_num = int(selected_week.split()[1])
-            module = load_module(f"week{week_num}")
-            if module:
-                module.main()  # Execute the week's main function
-
-    else:  # Quizzes section
-        quizzes = [f"Quiz {i}" for i in range(1, 11)]
-        selected_quiz = st.sidebar.selectbox("Select Quiz:", quizzes)
-        
-        if selected_quiz:
-            quiz_num = int(selected_quiz.split()[1])
-            module = load_module(f"quiz{quiz_num}")
-            if module:
-                module.main()  # Execute the quiz's main function
-
-    # Main content area with flip cards (shown when no specific week/quiz is selected)
-    if not st.session_state.get('module_selected', False):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### Assignments")
-            for i in range(1, 16):
-                with st.container():
-                    st.markdown(
-                        f"""
-                        <div class="flip-card">
-                            <div class="flip-card-inner">
-                                <div class="flip-card-front">
-                                    <h3>Week {i}</h3>
-                                </div>
-                                <div class="flip-card-back">
-                                    <p>Assignment for Week {i}</p>
-                                    <p>Click to view details</p>
-                                </div>
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-        
-        with col2:
-            st.markdown("### Quizzes")
-            for i in range(1, 11):
-                with st.container():
-                    st.markdown(
-                        f"""
-                        <div class="flip-card">
-                            <div class="flip-card-inner">
-                                <div class="flip-card-front">
-                                    <h3>Quiz {i}</h3>
-                                </div>
-                                <div class="flip-card-back">
-                                    <p>Quiz {i} Details</p>
-                                    <p>Click to start</p>
-                                </div>
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+    page = st.sidebar.radio("Go to", ["Assignments", "Quizzes"])
+    
+    if page == "Assignments":
+        st.header("Weekly Assignments")
+        for week in range(1, 16):
+            create_flip_card(
+                f"Week {week}",
+                f"Assignment for Week {week}. Click to view and submit your work.",
+                week
+            )
+            
+    else:  # Quizzes page
+        st.header("Course Quizzes")
+        for quiz in range(1, 11):
+            create_flip_card(
+                f"Quiz {quiz}",
+                f"Quiz {quiz} assessment. Click to start the quiz.",
+                quiz
+            )
+    
+    # Initialize or load grades dataframe
+    if 'grades_df' not in st.session_state:
+        try:
+            st.session_state.grades_df = pd.read_csv('grades/data_submission.csv')
+        except FileNotFoundError:
+            st.session_state.grades_df = pd.DataFrame(columns=[
+                'student_id', 'assignment_id', 'submission_date', 'grade'
+            ])
+            os.makedirs('grades', exist_ok=True)
+            st.session_state.grades_df.to_csv('grades/data_submission.csv', index=False)
 
 if __name__ == "__main__":
     main()
