@@ -1,4 +1,3 @@
-import re
 from geopy.distance import geodesic
 
 def calculate_grade(student_code):
