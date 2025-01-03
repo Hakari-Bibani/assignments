@@ -4,7 +4,7 @@ from geopy.distance import geodesic
 from io import StringIO
 import pandas as pd
 import os
-import grade1  # Import the grading script
+from grades.grade1 import calculate_grade  # Updated import statement
 
 # Define the coordinates
 COORDINATES = {
@@ -63,7 +63,7 @@ if st.button("Run Code"):
             st.write(output.getvalue())
 
             # Grade the submission
-            grade = grade1.calculate_grade(code_input)
+            grade = calculate_grade(code_input)
             st.subheader("Grading Result")
             st.write(f"Your grade for this assignment is: {grade}/100")
 
