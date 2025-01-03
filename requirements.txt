@@ -1,9 +1,8 @@
 streamlit
-streamlit-card
 pandas
 numpy
-python-dotenv
 plotly
-matplotlib
-seaborn
-scikit-learn
+pillow
+streamlit-option-menu
+python-dotenv
+requests
