@@ -1,90 +1,78 @@
-/* Moving title animation */
-@keyframes moveTitle {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-}
+import streamlit as st
 
-.moving-title {
-    color: red;
-    font-size: 3.5em;
-    font-weight: bold;
-    white-space: nowrap;
-    animation: moveTitle 15s linear infinite;
-    margin-bottom: 40px;
-}
+def get_animated_title():
+    return '''
+    <style>
+        @keyframes slide {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .sliding-text {
+            color: red;
+            font-size: 3em;
+            font-weight: bold;
+            white-space: nowrap;
+            animation: slide 15s linear infinite;
+            position: relative;
+            overflow: hidden;
+        }
+    </style>
+    <div style="overflow: hidden;">
+        <div class="sliding-text">Welcome to ImpactHub</div>
+    </div>
+    '''
 
-/* Flip Card Styles */
-.flip-card {
-    background-color: transparent;
-    width: 300px;
-    height: 200px;
-    perspective: 1000px;
-    margin: 20px auto;
-}
-
-.flip-card-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    text-align: center;
-    transition: transform 0.8s;
-    transform-style: preserve-3d;
-}
-
-.flip-card:hover .flip-card-inner {
-    transform: rotateY(180deg);
-}
-
-.flip-card-front, .flip-card-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-    border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.flip-card-front {
-    background: linear-gradient(45deg, #2193b0, #6dd5ed);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.flip-card-back {
-    background: linear-gradient(45deg, #834d9b, #d04ed6);
-    color: white;
-    transform: rotateY(180deg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.tab-button {
-    background-color: white;
-    color: #834d9b;
-    padding: 10px 20px;
-    border-radius: 5px;
-    text-decoration: none;
-    margin-top: 15px;
-    transition: all 0.3s ease;
-}
-
-.tab-button:hover {
-    background-color: #834d9b;
-    color: white;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .flip-card {
-        width: 250px;
-        height: 180px;
-    }
-    .moving-title {
-        font-size: 2.5em;
-    }
-}
+def apply_styles():
+    st.markdown('''
+        <style>
+            .flip-card {
+                background-color: transparent;
+                width: 300px;
+                height: 200px;
+                perspective: 1000px;
+                margin: 20px;
+            }
+            
+            .flip-card-inner {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                text-align: center;
+                transition: transform 0.8s;
+                transform-style: preserve-3d;
+                cursor: pointer;
+            }
+            
+            .flip-card:hover .flip-card-inner {
+                transform: rotateY(180deg);
+            }
+            
+            .flip-card-front, .flip-card-back {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                backface-visibility: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 10px;
+            }
+            
+            .flip-card-front {
+                background-color: #2c3e50;
+                color: white;
+            }
+            
+            .flip-card-back {
+                background-color: #3498db;
+                color: white;
+                transform: rotateY(180deg);
+                padding: 20px;
+            }
+            
+            .stButton button {
+                width: 100%;
+                margin-top: 10px;
+            }
+        </style>
+    ''', unsafe_allow_html=True)
