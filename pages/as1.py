@@ -1,52 +1,109 @@
+# pages/as1.py
+import streamlit as st
 import folium
 from geopy.distance import geodesic
-import streamlit as st
+import pandas as pd
 from streamlit_folium import st_folium
 
-# Define the coordinates
-points = {
-    "Point 1": (36.325735, 43.928414),
-    "Point 2": (36.393432, 44.586781),
-    "Point 3": (36.660477, 43.840174),
-}
-
-# Create a Folium map centered around the first point
-m = folium.Map(location=points["Point 1"], zoom_start=8)
-
-# Add markers for each point
-for point, coords in points.items():
-    folium.Marker(location=coords, popup=point).add_to(m)
-
-# Calculate distances
-distances = {
-    "Point 1 to Point 2": geodesic(points["Point 1"], points["Point 2"]).kilometers,
-    "Point 2 to Point 3": geodesic(points["Point 2"], points["Point 3"]).kilometers,
-    "Point 1 to Point 3": geodesic(points["Point 1"], points["Point 3"]).kilometers,
-}
-
-# Add lines between points with distance labels
-line_pairs = [
-    (points["Point 1"], points["Point 2"]),
-    (points["Point 2"], points["Point 3"]),
-    (points["Point 1"], points["Point 3"]),
+# Coordinates
+coordinates = [
+    (36.325735, 43.928414),  # Point 1
+    (36.393432, 44.586781),  # Point 2
+    (36.660477, 43.840174)   # Point 3
 ]
 
-for (coords_a, coords_b) in line_pairs:
-    folium.PolyLine([coords_a, coords_b], color='blue', weight=2.5, opacity=1).add_to(m)
-    mid_point = ((coords_a[0] + coords_b[0]) / 2, (coords_a[1] + coords_b[1]) / 2)
-    distance = geodesic(coords_a, coords_b).kilometers
-    folium.Marker(location=mid_point,
-                  popup=f"{distance:.2f} km",
-                  icon=folium.Icon(color='green')).add_to(m)
+# Function to create map
+def create_map(coords):
+    m = folium.Map(location=[36.5, 44], zoom_start=9)
+    
+    # Add markers
+    for i, coord in enumerate(coords, 1):
+        folium.Marker(
+            coord,
+            popup=f'Point {i}',
+            icon=folium.Icon(color='red')
+        ).add_to(m)
+    
+    # Add lines connecting points
+    folium.PolyLine(
+        coords,
+        color="blue",
+        weight=2,
+        opacity=0.8
+    ).add_to(m)
+    
+    return m
+
+# Function to calculate distances
+def calculate_distances(coords):
+    dist1_2 = geodesic(coords[0], coords[1]).kilometers
+    dist2_3 = geodesic(coords[1], coords[2]).kilometers
+    dist1_3 = geodesic(coords[0], coords[2]).kilometers
+    return dist1_2, dist2_3, dist1_3
 
 # Streamlit UI
-st.title("Mapping Coordinates and Calculating Distances")
-st.write("Below is an interactive map showing the points and distances between them.")
+st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 
-# Display the map in Streamlit
-st_folium(m, width=800, height=600)
+# Student Information
+name = st.text_input("Full Name")
+email = st.text_input("Email")
+student_id = st.text_input("Student ID (Optional)")
 
-# Create and display the distance report
-st.write("### Distance Report:")
-for pair, distance in distances.items():
-    st.write(f"- **{pair}**: {distance:.2f} km")
+# Assignment Details
+with st.expander("Assignment Details"):
+    st.write(
+        "Plot three geographical coordinates on a map and calculate distances between them."
+    )
+
+# Code Input
+code = st.text_area("Paste your Python code here:", height=200)
+
+# Tabs
+tab1, tab2 = st.tabs(["Run Code", "Submit"])
+
+# Run Code Tab
+with tab1:
+    if st.button("Run Code"):
+        try:
+            # Create map
+            m = create_map(coordinates)
+            
+            # Display map
+            st_folium(m, width=800)
+            
+            # Calculate and display distances
+            distances = calculate_distances(coordinates)
+            
+            st.write("### Distance Calculations:")
+            st.write(f"Distance between Point 1 and Point 2: {distances[0]:.2f} km")
+            st.write(f"Distance between Point 2 and Point 3: {distances[1]:.2f} km")
+            st.write(f"Distance between Point 1 and Point 3: {distances[2]:.2f} km")
+            
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+
+# Submit Tab
+with tab2:
+    if st.button("Submit"):
+        if not name or not email:
+            st.error("Name and Email are required to submit.")
+        else:
+            # Save submission
+            try:
+                new_entry = {
+                    "Full Name": name,
+                    "Student ID": student_id,
+                    "Assignment 1": 100,  # Placeholder score
+                    "Total": 100
+                }
+                
+                try:
+                    df = pd.read_csv("grades/data_submission.csv")
+                except FileNotFoundError:
+                    df = pd.DataFrame(columns=["Full Name", "Student ID", "Assignment 1", "Total"])
+                
+                df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+                df.to_csv("grades/data_submission.csv", index=False)
+                st.success("Submission successful!")
+            except Exception as e:
+                st.error(f"Error saving submission: {str(e)}")
