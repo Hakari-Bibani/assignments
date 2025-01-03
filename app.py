@@ -1,50 +1,59 @@
 import streamlit as st
-import streamlit.components.v1 as components
-from style import apply_style
-
-def create_flip_card(title, description):
-    return f"""
-    <div class="flip-card">
-        <div class="flip-card-inner">
-            <div class="flip-card-front">
-                <h3>{title}</h3>
-            </div>
-            <div class="flip-card-back">
-                <p>{description}</p>
-            </div>
-        </div>
-    </div>
-    """
+import style
+from PIL import Image
 
 def main():
-    apply_style()
+    # Apply custom styling
+    style.apply_styles()
     
-    # Title with animation
-    st.markdown("""
-        <h1 class="animated-title">ImpactHub</h1>
-    """, unsafe_allow_html=True)
+    # Animated title
+    st.markdown(
+        """
+        <div class="animate-title">
+            <h1>ImpactHub</h1>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     
-    # Assignments Section
-    st.header("Assignments")
-    cols = st.columns(3)
-    for i in range(15):
-        with cols[i % 3]:
-            components.html(
-                create_flip_card(f"Assignment {i+1}", 
-                               f"Click to view Assignment {i+1}"),
-                height=200
-            )
+    # Create two columns for Assignments and Quizzes
+    col1, col2 = st.columns(2)
     
-    # Quizzes Section
-    st.header("Quizzes")
-    cols = st.columns(3)
-    for i in range(10):
-        with cols[i % 3]:
-            components.html(
-                create_flip_card(f"Quiz {i+1}", 
-                               f"Click to view Quiz {i+1}"),
-                height=200
-            )
+    with col1:
+        st.header("Assignments")
+        for i in range(1, 16):
+            with st.container():
+                st.markdown(f"""
+                    <div class="flip-card">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front">
+                                <h3>Assignment {i}</h3>
+                            </div>
+                            <div class="flip-card-back">
+                                <p>Click to view Assignment {i}</p>
+                                <a href="/as{i}" target="_self">Go to Assignment</a>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+    
+    with col2:
+        st.header("Quizzes")
+        for i in range(1, 11):
+            with st.container():
+                st.markdown(f"""
+                    <div class="flip-card">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front">
+                                <h3>Quiz {i}</h3>
+                            </div>
+                            <div class="flip-card-back">
+                                <p>Click to view Quiz {i}</p>
+                                <a href="/quiz{i}" target="_self">Go to Quiz</a>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
