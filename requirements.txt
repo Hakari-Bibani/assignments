@@ -4,3 +4,15 @@ streamlit
 pandas
 numpy
 geopandas
+branca
+jinja2
+MarkupSafe
+certifi
+charset-normalizer
+idna
+python-dateutil
+pytz
+requests
+six
+tzdata
+urllib3
