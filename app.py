@@ -1,71 +1,50 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from style import apply_style
-import base64
 
-# Apply custom styling
-apply_style()
-
-def create_flip_card(title, content):
-    with st.container():
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            st.markdown(
-                f"""
-                <div class="flip-card">
-                    <div class="flip-card-inner">
-                        <div class="flip-card-front">
-                            <h3>{title}</h3>
-                        </div>
-                        <div class="flip-card-back">
-                            <p>{content}</p>
-                        </div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-def add_animated_text():
-    st.markdown(
-        """
-        <div class="animated-title">
-            <h1>ImpactHub</h1>
+def create_flip_card(title, description):
+    return f"""
+    <div class="flip-card">
+        <div class="flip-card-inner">
+            <div class="flip-card-front">
+                <h3>{title}</h3>
+            </div>
+            <div class="flip-card-back">
+                <p>{description}</p>
+            </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    </div>
+    """
 
 def main():
-    # Add animated title
-    add_animated_text()
+    apply_style()
     
-    # Create two columns for Assignments and Quizzes
-    col1, col2 = st.columns(2)
+    # Title with animation
+    st.markdown("""
+        <h1 class="animated-title">ImpactHub</h1>
+    """, unsafe_allow_html=True)
     
-    # Assignments section
-    with col1:
-        st.markdown("## Assignments")
-        assignments = [f"Assignment {i}" for i in range(1, 16)]
-        for assignment in assignments:
-            create_flip_card(assignment, f"Click to view {assignment} details")
+    # Assignments Section
+    st.header("Assignments")
+    cols = st.columns(3)
+    for i in range(15):
+        with cols[i % 3]:
+            components.html(
+                create_flip_card(f"Assignment {i+1}", 
+                               f"Click to view Assignment {i+1}"),
+                height=200
+            )
     
-    # Quizzes section
-    with col2:
-        st.markdown("## Quizzes")
-        quizzes = [f"Quiz {i}" for i in range(1, 11)]
-        for quiz in quizzes:
-            create_flip_card(quiz, f"Click to view {quiz} details")
-
-    # Sidebar navigation
-    with st.sidebar:
-        st.title("Navigation")
-        st.markdown("### Assignments")
-        for i in range(1, 16):
-            st.button(f"Assignment {i}")
-        
-        st.markdown("### Quizzes")
-        for i in range(1, 11):
-            st.button(f"Quiz {i}")
+    # Quizzes Section
+    st.header("Quizzes")
+    cols = st.columns(3)
+    for i in range(10):
+        with cols[i % 3]:
+            components.html(
+                create_flip_card(f"Quiz {i+1}", 
+                               f"Click to view Quiz {i+1}"),
+                height=200
+            )
 
 if __name__ == "__main__":
     main()
