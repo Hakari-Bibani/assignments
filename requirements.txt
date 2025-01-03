@@ -1,5 +1,6 @@
 streamlit
 pandas
-Pillow
 numpy
-python-dotenv
+pillow
+watchdog
+protobuf
