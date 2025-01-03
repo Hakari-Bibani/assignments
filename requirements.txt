@@ -1,7 +1,6 @@
 streamlit
+streamlit-card
+streamlit-marquee
 pandas
 numpy
-plotly
 pillow
-python-dotenv
-watchdog
