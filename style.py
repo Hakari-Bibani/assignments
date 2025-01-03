@@ -1,38 +1,36 @@
 import streamlit as st
+import base64
 
-def apply_style():
+def apply_styles():
+    """Apply custom styles to the Streamlit app"""
+    
     # Custom CSS for styling
     st.markdown("""
-    <style>
-        /* Moving title animation */
-        @keyframes moveTitle {
+        <style>
+        /* Main title animation */
+        @keyframes slideIn {
             0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+            100% { transform: translateX(0); }
         }
         
-        .moving-title {
-            overflow: hidden;
-            white-space: nowrap;
-            margin-bottom: 2rem;
-        }
-        
-        .moving-title h1 {
-            display: inline-block;
-            color: red;
-            font-size: 3.5rem;
+        .title-animation {
+            color: #FF0000;
+            font-size: 3.5em;
             font-weight: bold;
-            animation: moveTitle 15s linear infinite;
+            animation: slideIn 2s ease-in-out infinite alternate;
+            margin-bottom: 2em;
+            text-align: center;
         }
         
-        /* Flip Card Styling */
+        /* Flip card styles */
         .flip-card {
             background-color: transparent;
             width: 100%;
-            height: 120px;
+            height: 200px;
             perspective: 1000px;
-            margin-bottom: 1rem;
+            margin-bottom: 20px;
         }
-
+        
         .flip-card-inner {
             position: relative;
             width: 100%;
@@ -40,70 +38,82 @@ def apply_style():
             text-align: center;
             transition: transform 0.8s;
             transform-style: preserve-3d;
-            cursor: pointer;
         }
-
+        
         .flip-card:hover .flip-card-inner {
             transform: rotateY(180deg);
         }
-
+        
         .flip-card-front, .flip-card-back {
             position: absolute;
             width: 100%;
             height: 100%;
-            -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             border-radius: 10px;
-            padding: 1rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-
+        
         .flip-card-front {
-            background: linear-gradient(45deg, #1e88e5, #1565c0);
-            color: white;
+            background-color: #f8f9fa;
+            color: #1e1e1e;
+            padding: 20px;
         }
-
+        
         .flip-card-back {
-            background: linear-gradient(45deg, #43a047, #2e7d32);
+            background-color: #4CAF50;
             color: white;
             transform: rotateY(180deg);
+            padding: 20px;
         }
-
-        /* Button Styling */
-        .stButton button {
-            width: 100%;
-            background-color: #1565c0;
+        
+        /* Custom container styles */
+        .stContainer {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        /* Custom button styles */
+        .stButton>button {
+            background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 0.5rem;
+            padding: 10px 20px;
             border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
+            transition: all 0.3s ease;
         }
-
-        .stButton button:hover {
-            background-color: #0d47a1;
+        
+        .stButton>button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
         }
-
-        /* Tab Styling */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 2rem;
-        }
-
-        .stTabs [data-baseweb="tab"] {
-            height: 4rem;
-            white-space: pre-wrap;
-            background-color: #f0f2f6;
-            border-radius: 4px;
-            color: #0d47a1;
-            font-weight: bold;
-        }
-
-        .stTabs [aria-selected="true"] {
-            background-color: #1565c0;
-            color: white;
-        }
-    </style>
+        </style>
     """, unsafe_allow_html=True)
+    
+    # Custom title with animation
+    st.markdown(
+        '<h1 class="title-animation">ImpactHub</h1>',
+        unsafe_allow_html=True
+    )
+
+def get_base64_encoded_image(image_path):
+    """Get base64 encoded image"""
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+
+def set_background_image(image_path):
+    """Set background image"""
+    encoded_image = get_base64_encoded_image(image_path)
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/png;base64,{encoded_image}");
+            background-size: cover;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
