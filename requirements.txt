@@ -1,6 +1,7 @@
 streamlit
-streamlit-card
-streamlit-marquee
+importlib-metadata
 pandas
 numpy
-pillow
+plotly
+python-dateutil
+pytz
