@@ -5,7 +5,3 @@ pillow
 geopy
 folium
 geopandas
-streamlit-folium
-geopandas
-branca
-matplotlib
