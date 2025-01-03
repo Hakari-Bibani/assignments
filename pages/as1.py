@@ -57,7 +57,12 @@ run_code = st.button("Run Code")
 
 if run_code and student_code:
     try:
-        # Replace IPython.display.display with st_folium and st.write
+        # Preprocess the student's code
+        # Remove or replace HTML-related code
+        student_code = student_code.replace(
+            "from folium import HTML",
+            ""
+        )
         student_code = student_code.replace(
             "from IPython.display import display",
             "from streamlit_folium import st_folium"
