@@ -1,1 +1,15 @@
-
+streamlit
+pandas
+numpy
+plotly
+python-dotenv
+streamlit-option-menu
+streamlit-card
+streamlit-custom-notification-box
+streamlit-elements
+streamlit-extras
+streamlit-faker
+streamlit-image-coordinates
+streamlit-keyup==0.2.0
+streamlit-toggle-switch
+streamlit-vertical-slider
