@@ -2,8 +2,8 @@
 import streamlit as st
 import pandas as pd
 import os
-import base64
-import folium
+from io import StringIO
+import contextlib
 
 def run_assignment():
     st.title("Week 1 Assignment - Mapping Coordinates")
@@ -37,15 +37,14 @@ def run_assignment():
     if st.button("Run Code"):
         if code:
             try:
-                # Capture the map output
-                namespace = {}
-                exec(code, namespace)
+                # Create string buffer to capture print outputs
+                output = StringIO()
+                with contextlib.redirect_stdout(output):
+                    # Execute the code
+                    exec(code)
                 
-                # If a map was created, save it as HTML and display it
-                if 'm' in namespace and isinstance(namespace['m'], folium.Map):
-                    map_html = namespace['m']._repr_html_()
-                    st.components.v1.html(map_html, height=500)
-                
+                # Display the output
+                st.text(output.getvalue())
                 st.success("Code executed successfully!")
             except Exception as e:
                 st.error(f"Error executing code: {str(e)}")
@@ -62,10 +61,13 @@ def run_assignment():
             # Create or load CSV file
             csv_path = "grades/data_submission.csv"
             if not os.path.exists(csv_path):
-                df = pd.DataFrame(columns=['full_name', 'student_id', 'email'] + 
-                                [f'assignment{i}' for i in range(1, 16)] +
-                                [f'quiz{i}' for i in range(1, 11)] +
-                                ['total'])
+                columns = ['full_name', 'student_id', 'email']
+                for i in range(1, 16):
+                    columns.append(f'assignment{i}')
+                for i in range(1, 11):
+                    columns.append(f'quiz{i}')
+                columns.append('total')
+                df = pd.DataFrame(columns=columns)
             else:
                 df = pd.read_csv(csv_path)
             
