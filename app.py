@@ -1,34 +1,27 @@
 import streamlit as st
-from streamlit_extras.switch_page_button import switch_page
+from style import apply_style  # Import custom styling
 
-# Page configuration
-st.set_page_config(page_title="ImpactHub", layout="wide")
+# Apply custom styling
+apply_style()
 
-# Header with animated title
-st.markdown("""
-    <h1 style="color: red; font-size: 3em; animation: fadeIn 2s infinite;">ImpactHub</h1>
-    <style>
-        @keyframes fadeIn {
-            0% {opacity: 0;}
-            50% {opacity: 1;}
-            100% {opacity: 0;}
-        }
-    </style>
-""", unsafe_allow_html=True)
+# Main page title
+st.title("ImpactHub")
 
-# Main page layout
-st.header("Assignments and Quizzes")
-
-# Flip cards for Assignments
-st.subheader("Assignments")
+# Display assignments and quizzes in flip cards
+st.header("Assignments")
+assignment_cols = st.columns(3)  # Display 3 assignments per row
 for i in range(1, 16):
-    with st.expander(f"Assignment {i}"):
-        if st.button(f"Go to Assignment {i}"):
-            switch_page(f"as{i}")
+    with assignment_cols[(i - 1) % 3]:
+        with st.expander(f"Assignment {i}"):
+            st.write(f"Description for Assignment {i}")
+            if st.button(f"Go to Assignment {i}", key=f"as{i}"):
+                st.switch_page(f"pages/as{i}.py")  # Navigate to the assignment page
 
-# Flip cards for Quizzes
-st.subheader("Quizzes")
+st.header("Quizzes")
+quiz_cols = st.columns(3)  # Display 3 quizzes per row
 for i in range(1, 11):
-    with st.expander(f"Quiz {i}"):
-        if st.button(f"Go to Quiz {i}"):
-            switch_page(f"quiz{i}")
+    with quiz_cols[(i - 1) % 3]:
+        with st.expander(f"Quiz {i}"):
+            st.write(f"Description for Quiz {i}")
+            if st.button(f"Go to Quiz {i}", key=f"quiz{i}"):
+                st.switch_page(f"pages/quiz{i}.py")  # Navigate to the quiz page
