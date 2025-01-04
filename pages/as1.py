@@ -117,8 +117,8 @@ with tabs[1]:
                     submission_data = {
                         'Full name': [name],
                         'Email': [email],
-                        'Student ID': [student_id],
-                        'Assignment1': [grade],
+                        'student ID': [student_id],
+                        'assignment1': [grade],
                         'Total': [grade]
                     }
                     
