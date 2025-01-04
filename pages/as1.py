@@ -104,51 +104,49 @@ with tabs[0]:
 
 # Inside the submit tab of as1.py, replace the submission handling code:
 
-with tabs[1]:
-    if st.button("Submit", type="primary"):
-        if not name or not email:
-            st.error("Please fill in both your Name and Email before submitting.")
-        elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
-            st.error("Please run your code and generate the map before submitting.")
-        else:
+# In the Submit tab section
+if st.button("Submit", type="primary"):
+    if not name or not email:
+        st.error("Please fill in both your Name and Email before submitting.")
+    elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
+        st.error("Please run your code and generate the map before submitting.")
+    else:
+        try:
+            # Grade the submission
+            from grades.grade1 import grade_submission
+            score, breakdown = grade_submission(code)
+
+            # Prepare submission dictionary with correct column names
+            submission = {
+                'Full Name': name.strip(),
+                'Email': email.strip(),
+                'Student ID': student_id.strip() if student_id else 'N/A',
+                'Assignment1': score
+            }
+
+            # Load existing data or create a new DataFrame
+            file_path = 'grades/data_submission.csv'
             try:
-                # Grade the submission
-                from grades.grade1 import grade_submission
-                score, breakdown = grade_submission(code)
+                df = pd.read_csv(file_path)
+            except FileNotFoundError:
+                df = pd.DataFrame(columns=['Full Name', 'Email', 'Student ID', 'Assignment1'])
 
-                # Prepare submission with exact column names
-                submission = {
-                    'Full name': name.strip(),      # Ensure this matches exactly
-                    'email': email.strip(),         # lowercase 'email'
-                    'student ID': student_id.strip() if student_id else 'N/A',  # lowercase with space
-                    'assigment1': score           # This specific spelling
-                }
+            # Update or add the submission
+            if submission['Full Name'] in df['Full Name'].values:
+                # Update existing student's data
+                df.loc[df['Full Name'] == submission['Full Name'], 
+                      ['Email', 'Student ID', 'Assignment1']] = \
+                    [submission['Email'], submission['Student ID'], submission['Assignment1']]
+            else:
+                # Add new student data
+                new_row = pd.DataFrame([submission])
+                df = pd.concat([df, new_row], ignore_index=True)
 
-                # Load or create CSV file
-                file_path = 'grades/data_submission.csv'
-                try:
-                    df = pd.read_csv(file_path)
-                except FileNotFoundError:
-                    # Create new DataFrame with exact column names
-                    df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1'])
+            # Save the updated DataFrame
+            df.to_csv(file_path, index=False)
 
-                # Update or add new submission
-                if submission['Full name'] in df['Full name'].values:
-                    # Update existing record
-                    mask = df['Full name'] == submission['Full name']
-                    for col in submission:
-                        df.loc[mask, col] = submission[col]
-                else:
-                    # Add new record
-                    new_row = pd.DataFrame([submission])
-                    df = pd.concat([df, new_row], ignore_index=True)
-
-                # Save to CSV
-                df.to_csv(file_path, index=False)
-
-                # Success message
-                st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
-                st.balloons()
-
-            except Exception as e:
-                st.error(f"❌ Error during submission: {str(e)}")
+            # Confirm successful submission
+            st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+            st.balloons()
+        except Exception as e:
+            st.error(f"❌ Error during submission: {str(e)}")
