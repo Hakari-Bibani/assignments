@@ -1,3 +1,4 @@
+# pages/as1.py
 import streamlit as st
 import folium
 from geopy.distance import geodesic
@@ -18,21 +19,6 @@ COORDINATES = [
     (36.393432, 44.586781),  # Point 2
     (36.660477, 43.840174)   # Point 3
 ]
-
-# Function to calculate distances
-def calculate_distances(coords):
-    try:
-        dist1_2 = geodesic(coords[0], coords[1]).kilometers
-        dist2_3 = geodesic(coords[1], coords[2]).kilometers
-        dist1_3 = geodesic(coords[0], coords[2]).kilometers
-        return {
-            'Distance 1-2': round(dist1_2, 2),
-            'Distance 2-3': round(dist2_3, 2),
-            'Distance 1-3': round(dist1_3, 2)
-        }
-    except Exception as e:
-        st.error(f"Error calculating distances: {str(e)}")
-        return None
 
 # Function to capture print outputs
 @contextlib.contextmanager
@@ -102,9 +88,9 @@ if 'distances' not in st.session_state:
     st.session_state.distances = None
 
 # Tabbed interface for Run/Submit
-tabs = st.tabs(["Run Cell", "Submit Assignment"])
+tab1, tab2 = st.tabs(["Run Cell", "Submit Assignment"])
 
-with tabs[0]:
+with tab1:
     if st.button("▶ Run", type="primary"):
         if code.strip():
             # Create output cell styling
@@ -136,11 +122,9 @@ with tabs[0]:
                     for var in local_vars:
                         if isinstance(local_vars[var], folium.Map):
                             st.session_state.map_obj = local_vars[var]
-                            # Calculate distances when map is found
-                            st.session_state.distances = calculate_distances(COORDINATES)
                             break
 
-ith tabs[1]:
+with tab2:
     if st.button("Submit", type="primary"):
         if not name or not email:
             st.error("Please fill in Name and Email before submitting.")
@@ -207,16 +191,6 @@ ith tabs[1]:
                 st.error(f"Error submitting assignment: {str(e)}")
                 st.error("Please try again or contact support if the problem persists.")
 
-# Always display the map and distances if they exist in session state
+# Always display the map if it exists in session state
 if st.session_state.map_obj:
     st_folium(st.session_state.map_obj, width=800, height=500)
-    
-    if st.session_state.distances:
-        st.markdown("### 📏 Distance Report")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
-        with col2:
-            st.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
-        with col3:
-            st.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
