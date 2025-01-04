@@ -3,7 +3,7 @@ import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
-import os
+from pages.style1 import execute_code, display_output
 
 # Constants for coordinates
 COORDINATES = [
@@ -11,19 +11,6 @@ COORDINATES = [
     (36.393432, 44.586781),  # Point 2
     (36.660477, 43.840174)   # Point 3
 ]
-
-def grade_submission(code):
-    """Grade the submitted code"""
-    try:
-        # Import necessary grading functions from grade1.py
-        import sys
-        sys.path.append('grades')
-        from grade1 import grade_submission
-        score, breakdown = grade_submission(code)
-        return score, breakdown
-    except Exception as e:
-        st.error(f"Grading error: {str(e)}")
-        return 0, {}
 
 # Function to calculate distances
 def calculate_distances(coords):
@@ -39,39 +26,6 @@ def calculate_distances(coords):
     except Exception as e:
         st.error(f"Error calculating distances: {str(e)}")
         return None
-
-def save_submission(name, student_id, email, code, score):
-    """Save submission to CSV file"""
-    try:
-        submission = {
-            'Full Name': name,
-            'Student ID': student_id if student_id else 'N/A',
-            'Email': email,
-            'Assignment 1': code,
-            'Grade': score,
-            'Total': score
-        }
-        
-        # Ensure the grades directory exists
-        os.makedirs('grades', exist_ok=True)
-        
-        csv_path = 'grades/data_submission.csv'
-        try:
-            df = pd.read_csv(csv_path)
-        except FileNotFoundError:
-            df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Grade', 'Total'])
-        
-        # Check if student already submitted
-        if len(df) > 0 and name in df['Full Name'].values:
-            df.loc[df['Full Name'] == name] = submission
-        else:
-            df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
-            
-        df.to_csv(csv_path, index=False)
-        return True
-    except Exception as e:
-        st.error(f"Error saving submission: {str(e)}")
-        return False
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -116,22 +70,16 @@ with tabs[0]:
     if st.button("▶ Run", type="primary"):
         if code.strip():
             st.markdown("### 📤 Output Cell")
+            output, error, local_vars = execute_code(code)
+            display_output(output, error)
             
-            # Execute the code
-            local_namespace = {}
-            try:
-                exec(code, {'folium': folium, 'geodesic': geodesic}, local_namespace)
-                
-                # Store map and distances in session state
-                for var in local_namespace:
-                    if isinstance(local_namespace[var], folium.Map):
-                        st.session_state.map_obj = local_namespace[var]
+            # Store map and distances in session state
+            if local_vars:
+                for var in local_vars:
+                    if isinstance(local_vars[var], folium.Map):
+                        st.session_state.map_obj = local_vars[var]
                         st.session_state.distances = calculate_distances(COORDINATES)
                         break
-                
-                st.success("Code executed successfully!")
-            except Exception as e:
-                st.error(f"Error executing code: {str(e)}")
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
@@ -140,26 +88,31 @@ with tabs[1]:
         elif not code.strip():
             st.error("Please enter your code before submitting.")
         else:
-            # Grade the submission
-            score, breakdown = grade_submission(code)
-            
-            # Save the submission
-            if save_submission(name, student_id, email, code, score):
-                st.success(f"Assignment submitted successfully! Your grade: {score}/100")
-                
-                # Display grading breakdown
-                st.markdown("### Grading Breakdown")
-                for category, points in breakdown.items():
-                    if isinstance(points, dict):
-                        st.write(f"**{category}:**")
-                        for subcategory, subpoints in points.items():
-                            st.write(f"- {subcategory}: {subpoints:.2f} points")
-                    else:
-                        st.write(f"**{category}:** {points:.2f} points")
-                
-                st.balloons()
-            else:
-                st.error("Failed to save submission. Please try again.")
+            try:
+                output, error, local_vars = execute_code(code)
+                if error:
+                    st.error(f"Error in code execution: {error}")
+                else:
+                    submission = {
+                        'Full Name': name,
+                        'Student ID': student_id if student_id else 'N/A',
+                        'Email': email,
+                        'Assignment 1': 100,  # Placeholder score
+                        'Total': 100
+                    }
+                    
+                    try:
+                        df = pd.read_csv('grades/data_submission.csv')
+                    except FileNotFoundError:
+                        df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
+                    
+                    df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                    df.to_csv('grades/data_submission.csv', index=False)
+                    
+                    st.success("Assignment submitted successfully!")
+                    st.balloons()
+            except Exception as e:
+                st.error(f"Error submitting assignment: {str(e)}")
 
 # Display the map and distances
 if st.session_state.get('map_obj'):
