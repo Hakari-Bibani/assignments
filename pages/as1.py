@@ -92,6 +92,7 @@ with tabs[0]:
 
 
 
+# In the Submit tab section of as1.py, replace the submission code with:
 with tabs[1]:
     if st.button("Submit", type="primary"):
         if not name or not email or not student_id:
@@ -108,51 +109,27 @@ with tabs[1]:
                     # Calculate grade
                     grade, _ = grade_submission(code)
                     
-                    # Prepare the data row
-                    new_row = {
-                        'fullname': name,
-                        'email': email,
-                        'studentID': student_id
-                    }
+                    # Read the existing CSV file
+                    csv_path = 'grades/data_submission.csv'
+                    df = pd.read_csv(csv_path)
                     
-                    # Initialize all assignment and quiz columns to 0
-                    for i in range(1, 16):  # assignments 1-15
-                        new_row[f'assignment{i}'] = 0
-                    for i in range(1, 11):  # quizzes 1-10
-                        new_row[f'quiz{i}'] = 0
-                        
-                    # Set the current assignment grade
+                    # Create a new row with all columns initialized to 0
+                    new_row = pd.DataFrame([{col: 0 for col in df.columns}])
+                    
+                    # Update the specific fields
+                    new_row['fullname'] = name
+                    new_row['email'] = email
+                    new_row['studentID'] = student_id
                     new_row['assignment1'] = grade
                     
-                    # Calculate total
-                    total = sum(new_row[f'assignment{i}'] for i in range(1, 16)) + \
-                           sum(new_row[f'quiz{i}'] for i in range(1, 11))
-                    new_row['total'] = total
-
-                    try:
-                        # Read existing CSV
-                        df = pd.read_csv('grades/data_submission.csv')
-                        
-                        # Check if student already exists
-                        student_mask = df['studentID'] == student_id
-                        if student_mask.any():
-                            # Update existing student's assignment1
-                            df.loc[student_mask, 'assignment1'] = grade
-                            # Recalculate total
-                            assignments_sum = df.loc[student_mask, [f'assignment{i}' for i in range(1, 16)]].sum(axis=1)
-                            quizzes_sum = df.loc[student_mask, [f'quiz{i}' for i in range(1, 11)]].sum(axis=1)
-                            df.loc[student_mask, 'total'] = assignments_sum + quizzes_sum
-                        else:
-                            # Add new student
-                            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                        
-                        # Save to CSV
-                        df.to_csv('grades/data_submission.csv', index=False)
-                        st.success(f"Assignment submitted successfully! Grade: {grade}/100")
-                        st.balloons()
-                        
-                    except Exception as e:
-                        st.error(f"Error saving to CSV: {str(e)}")
-                        
+                    # Add the new row to the DataFrame
+                    df = pd.concat([df, new_row], ignore_index=True)
+                    
+                    # Save back to CSV
+                    df.to_csv(csv_path, index=False)
+                    
+                    st.success(f"Assignment submitted successfully! Grade: {grade}/100")
+                    st.balloons()
+                    
             except Exception as e:
-                st.error(f"Error processing submission: {str(e)}")
+                st.error(f"Error saving submission: {str(e)}")
