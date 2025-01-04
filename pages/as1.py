@@ -33,7 +33,7 @@ st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 # Student Information
 name = st.text_input("Full Name")
 email = st.text_input("Email")
-student_id = st.text_input("Student ID (Optional)")
+student_id = st.text_input("Student ID")
 
 # Assignment Details Accordion
 with st.expander("Assignment Details", expanded=True):
