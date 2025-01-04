@@ -3,7 +3,7 @@ import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
-from pages.style1 import execute_code, display_output
+from utils.style1 import execute_code, display_output
 
 # Constants for coordinates
 COORDINATES = [
