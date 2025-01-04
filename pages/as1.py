@@ -43,6 +43,18 @@ def ensure_grades_directory():
         grades_path.mkdir(parents=True)
     return grades_path / 'data_submission.csv'
 
+# Function to load or create submission DataFrame
+def load_or_create_submission_df():
+    csv_path = ensure_grades_directory()
+    try:
+        df = pd.read_csv(csv_path)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        df = pd.DataFrame(columns=[
+            'Full Name', 'Student ID', 'Email', 
+            'Assignment 1', 'Grade', 'Grading_Details', 'Total'
+        ])
+    return df, csv_path
+
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 
@@ -119,31 +131,28 @@ with tabs[1]:
                 
                 # Prepare submission data
                 submission = {
-                    'Full Name': name,
-                    'Student ID': student_id if student_id else 'N/A',
-                    'Email': email,
-                    'Assignment 1': code,
-                    'Grade': grade,
-                    'Grading_Details': str(grade_details),
-                    'Total': grade
+                    'Full Name': [name],
+                    'Student ID': [student_id if student_id else 'N/A'],
+                    'Email': [email],
+                    'Assignment 1': [code],
+                    'Grade': [grade],
+                    'Grading_Details': [str(grade_details)],
+                    'Total': [grade]
                 }
                 
-                # Get the CSV file path
-                csv_path = ensure_grades_directory()
+                # Load existing data or create new DataFrame
+                df, csv_path = load_or_create_submission_df()
                 
-                # Read existing data or create new DataFrame
-                try:
-                    df = pd.read_csv(csv_path)
-                except FileNotFoundError:
-                    df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Grade', 'Grading_Details', 'Total'])
+                # Convert submission to DataFrame
+                submission_df = pd.DataFrame(submission)
                 
-                # Check if student already submitted
-                if df['Email'].str.lower().eq(email.lower()).any():
+                # Check for existing submission
+                if not df.empty and email in df['Email'].values:
                     st.warning("You have already submitted this assignment. This submission will update your previous submission.")
-                    df = df[~df['Email'].str.lower().eq(email.lower())]
+                    df = df[df['Email'] != email]
                 
-                # Add new submission
-                df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                # Concatenate the new submission
+                df = pd.concat([df, submission_df], ignore_index=True)
                 
                 # Save to CSV
                 df.to_csv(csv_path, index=False)
@@ -157,6 +166,7 @@ with tabs[1]:
                 
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
+                st.error(f"Error details: {type(e).__name__}: {str(e)}")
 
 # Display the map and distances
 if st.session_state.get('map_obj'):
