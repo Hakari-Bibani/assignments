@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import folium
 from geopy.distance import geodesic
 import pandas as pd
@@ -12,8 +12,8 @@ COORDINATES = [
     (36.660477, 43.840174)   # Point 3
 ]
 
+# Function to calculate distances
 def calculate_distances(coords):
-    """Calculate distances between given coordinates."""
     try:
         dist1_2 = geodesic(coords[0], coords[1]).kilometers
         dist2_3 = geodesic(coords[1], coords[2]).kilometers
@@ -26,64 +26,6 @@ def calculate_distances(coords):
     except Exception as e:
         st.error(f"Error calculating distances: {str(e)}")
         return None
-
-def save_submission(name, email, student_id, score, file_path='grades/data_submission.csv'):
-    """
-    Save or update student submission data in the CSV file.
-    """
-    try:
-        # Input validation
-        if not name or not email:
-            return False, "Name and email are required"
-        
-        name = name.strip()
-        email = email.strip()
-        student_id = student_id.strip() if student_id else 'N/A'
-        
-        # Prepare submission data
-        submission = {
-            'Full name': name,
-            'email': email,
-            'student ID': student_id,
-            'assigment1': float(score)
-        }
-        
-        try:
-            # Try reading existing CSV
-            df = pd.read_csv(file_path)
-            
-            # Verify column structure
-            required_cols = ['Full name', 'email', 'student ID', 'assigment1', 'total']
-            missing_cols = [col for col in required_cols if col not in df.columns]
-            if missing_cols:
-                return False, f"CSV file missing required columns: {missing_cols}"
-                
-        except FileNotFoundError:
-            # Create new DataFrame if file doesn't exist
-            df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
-        
-        # Check for existing submission
-        if name in df['Full name'].values:
-            # Update existing record
-            df.loc[df['Full name'] == name, ['email', 'student ID', 'assigment1']] = \
-                [email, student_id, score]
-            update_msg = "Submission updated"
-        else:
-            # Add new record
-            new_row = pd.DataFrame([submission])
-            df = pd.concat([df, new_row], ignore_index=True)
-            update_msg = "New submission added"
-            
-        # Recalculate total column
-        df['total'] = df.filter(like='assigment').sum(axis=1)
-        
-        # Save to CSV
-        df.to_csv(file_path, index=False)
-        
-        return True, f"{update_msg} successfully"
-        
-    except Exception as e:
-        return False, f"Error saving submission: {str(e)}"
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -98,12 +40,12 @@ with st.expander("Assignment Details", expanded=True):
     st.markdown("""
     ### Objective:
     Write a Python script to plot three geographical coordinates on a map and calculate distances between them.
-    
+
     ### Coordinates:
     - Point 1: (36.325735, 43.928414)
     - Point 2: (36.393432, 44.586781)
     - Point 3: (36.660477, 43.840174)
-    
+
     ### Expected Output:
     1. A map showing all three points with markers
     2. Distance calculations between:
@@ -140,7 +82,7 @@ with tabs[0]:
                         st.session_state['distances'] = calculate_distances(COORDINATES)
                         map_found = True
                         break
-            
+
             if not map_found:
                 st.warning("No map object found in your code.")
         else:
@@ -169,15 +111,44 @@ with tabs[1]:
                 # Grade the submission
                 from grades.grade1 import grade_submission
                 score, breakdown = grade_submission(code)
-                
-                # Save the submission
-                success, message = save_submission(name, email, student_id, score)
-                
-                if success:
-                    st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
-                    st.balloons()
+
+                # Prepare submission dictionary
+                submission = {
+                    'Full name': name.strip(),
+                    'email': email.strip(),
+                    'student ID': student_id.strip() if student_id else 'N/A',
+                    'assigment1': score
+                }
+
+                # Load existing data or create a new DataFrame
+                file_path = 'grades/data_submission.csv'
+                try:
+                    # Try reading the existing CSV
+                    df = pd.read_csv(file_path)
+                except FileNotFoundError:
+                    # Create a new DataFrame if the file does not exist
+                    df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
+
+                # Check if the student already exists in the DataFrame
+                if submission['Full name'] in df['Full name'].values:
+                    # Update existing student's data
+                    df.loc[df['Full name'] == submission['Full name'], ['email', 'student ID', 'assigment1']] = \
+                        [submission['email'], submission['student ID'], submission['assigment1']]
                 else:
-                    st.error(f"❌ {message}")
-                    
+                    # Add new student data
+                    new_row = pd.DataFrame([submission])
+                    df = pd.concat([df, new_row], ignore_index=True)
+
+                # Recalculate the 'total' column as the sum of assignment scores
+                # Assuming the CSV has columns like 'assigment1', 'assigment2', etc.
+                assignment_columns = [col for col in df.columns if col.startswith('assigment')]
+                df['total'] = df[assignment_columns].sum(axis=1)
+
+                # Save the updated DataFrame back to the CSV file
+                df.to_csv(file_path, index=False)
+
+                # Confirm successful submission
+                st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+                st.balloons()
             except Exception as e:
                 st.error(f"❌ Error during submission: {str(e)}")
