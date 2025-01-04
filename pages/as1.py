@@ -3,10 +3,7 @@ import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
-import sys
-from io import StringIO
-import contextlib
-from style1 import style_output, display_error, display_map_and_distances
+from pages.style1 import execute_code, display_output
 
 # Constants for coordinates
 COORDINATES = [
@@ -30,35 +27,15 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
-# Function to capture print outputs
-@contextlib.contextmanager
-def capture_output():
-    new_out = StringIO()
-    old_out = sys.stdout
-    try:
-        sys.stdout = new_out
-        yield sys.stdout
-    finally:
-        sys.stdout = old_out
-
-def execute_code(code_string):
-    """Execute code and capture its output"""
-    with capture_output() as s:
-        try:
-            local_vars = {}
-            exec(code_string, globals(), local_vars)
-            output = s.getvalue()
-            return output, None, local_vars
-        except Exception as e:
-            return None, str(e), None
-
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 
+# Student Information
 name = st.text_input("Full Name")
 email = st.text_input("Email")
 student_id = st.text_input("Student ID (Optional)")
 
+# Assignment Details Accordion
 with st.expander("Assignment Details", expanded=True):
     st.markdown("""
     ### Objective:
@@ -77,6 +54,7 @@ with st.expander("Assignment Details", expanded=True):
        - Point 1 and Point 3
     """)
 
+# Code Input
 st.markdown("### 📝 Code Cell")
 code = st.text_area(
     "",
@@ -85,11 +63,7 @@ code = st.text_area(
     help="Write or paste your Python code that implements the required functionality"
 )
 
-if 'map_obj' not in st.session_state:
-    st.session_state.map_obj = None
-if 'distances' not in st.session_state:
-    st.session_state.distances = None
-
+# Tabbed interface for Run/Submit
 tabs = st.tabs(["Run Cell", "Submit Assignment"])
 
 with tabs[0]:
@@ -97,16 +71,15 @@ with tabs[0]:
         if code.strip():
             st.markdown("### 📤 Output Cell")
             output, error, local_vars = execute_code(code)
-            if error:
-                display_error(error)
-            else:
-                style_output(output)
-                if local_vars:
-                    for var in local_vars:
-                        if isinstance(local_vars[var], folium.Map):
-                            st.session_state.map_obj = local_vars[var]
-                            st.session_state.distances = calculate_distances(COORDINATES)
-                            break
+            display_output(output, error)
+            
+            # Store map and distances in session state
+            if local_vars:
+                for var in local_vars:
+                    if isinstance(local_vars[var], folium.Map):
+                        st.session_state.map_obj = local_vars[var]
+                        st.session_state.distances = calculate_distances(COORDINATES)
+                        break
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
@@ -119,24 +92,34 @@ with tabs[1]:
                 output, error, local_vars = execute_code(code)
                 if error:
                     st.error(f"Error in code execution: {error}")
-                    st.error("Please fix the code before submitting.")
                 else:
                     submission = {
                         'Full Name': name,
                         'Student ID': student_id if student_id else 'N/A',
                         'Email': email,
-                        'Assignment 1': 100,
+                        'Assignment 1': 100,  # Placeholder score
                         'Total': 100
                     }
+                    
                     try:
                         df = pd.read_csv('grades/data_submission.csv')
                     except FileNotFoundError:
                         df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
+                    
                     df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
                     df.to_csv('grades/data_submission.csv', index=False)
+                    
                     st.success("Assignment submitted successfully!")
                     st.balloons()
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
 
-display_map_and_distances()
+# Display the map and distances
+if st.session_state.get('map_obj'):
+    st_folium(st.session_state.map_obj, width=800, height=500)
+    if st.session_state.get('distances'):
+        st.markdown("### 📏 Distance Report")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
+        col2.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
+        col3.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
