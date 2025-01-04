@@ -4,15 +4,7 @@ from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 import os
-import sys
 from pathlib import Path
-
-# Add the grades directory to system path
-grades_dir = Path(__file__).parent.parent / 'grades'
-sys.path.append(str(grades_dir))
-
-# Import the grading function
-from grade1 import grade_submission
 
 # Constants for coordinates
 COORDINATES = [
@@ -36,24 +28,20 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
-# Ensure grades directory exists
-def ensure_grades_directory():
-    grades_path = Path(__file__).parent.parent / 'grades'
-    if not grades_path.exists():
-        grades_path.mkdir(parents=True)
-    return grades_path / 'data_submission.csv'
+# Function to get grades directory path
+def get_grades_path():
+    current_dir = Path(__file__).parent.parent
+    grades_dir = current_dir / 'grades'
+    return grades_dir / 'data_submission.csv'
 
-# Function to load or create submission DataFrame
-def load_or_create_submission_df():
-    csv_path = ensure_grades_directory()
-    try:
-        df = pd.read_csv(csv_path)
-    except (FileNotFoundError, pd.errors.EmptyDataError):
-        df = pd.DataFrame(columns=[
-            'Full Name', 'Student ID', 'Email', 
-            'Assignment 1', 'Grade', 'Grading_Details', 'Total'
-        ])
-    return df, csv_path
+# Add the grades directory to system path
+grades_path = get_grades_path()
+if not grades_path.parent.exists():
+    grades_path.parent.mkdir(parents=True)
+
+# Import grading function
+sys.path.append(str(grades_path.parent))
+from grade1 import grade_submission
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -91,10 +79,6 @@ code = st.text_area(
     help="Write or paste your Python code that implements the required functionality"
 )
 
-# Initialize session state for submission status
-if 'submitted' not in st.session_state:
-    st.session_state.submitted = False
-
 # Tabbed interface for Run/Submit
 tabs = st.tabs(["Run Cell", "Submit Assignment"])
 
@@ -129,40 +113,40 @@ with tabs[1]:
                 # Grade the submission
                 grade, grade_details = grade_submission(code)
                 
-                # Prepare submission data
-                submission = {
+                # Read existing CSV file
+                csv_path = get_grades_path()
+                try:
+                    df = pd.read_csv(csv_path)
+                except (FileNotFoundError, pd.errors.EmptyDataError):
+                    # Create DataFrame with correct columns if file doesn't exist
+                    df = pd.DataFrame(columns=[
+                        'Full Name', 'Student ID', 'Email', 
+                        'Assignment 1', 'Total'
+                    ])
+
+                # Create new submission row
+                new_submission = pd.DataFrame({
                     'Full Name': [name],
                     'Student ID': [student_id if student_id else 'N/A'],
                     'Email': [email],
                     'Assignment 1': [code],
-                    'Grade': [grade],
-                    'Grading_Details': [str(grade_details)],
                     'Total': [grade]
-                }
-                
-                # Load existing data or create new DataFrame
-                df, csv_path = load_or_create_submission_df()
-                
-                # Convert submission to DataFrame
-                submission_df = pd.DataFrame(submission)
-                
-                # Check for existing submission
-                if not df.empty and email in df['Email'].values:
-                    st.warning("You have already submitted this assignment. This submission will update your previous submission.")
+                })
+
+                # Remove previous submission if exists
+                if not df.empty and 'Email' in df.columns:
                     df = df[df['Email'] != email]
-                
-                # Concatenate the new submission
-                df = pd.concat([df, submission_df], ignore_index=True)
-                
+
+                # Append new submission
+                df = pd.concat([df, new_submission], ignore_index=True)
+
                 # Save to CSV
                 df.to_csv(csv_path, index=False)
                 
+                # Display results
                 st.success(f"Assignment submitted successfully! Your grade is: {grade}/100")
                 st.json(grade_details)
                 st.balloons()
-                
-                # Update session state
-                st.session_state.submitted = True
                 
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
@@ -176,4 +160,4 @@ if st.session_state.get('map_obj'):
         col1, col2, col3 = st.columns(3)
         col1.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
         col2.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
-        col3.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
+        col1.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
