@@ -89,83 +89,37 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Grade the submission using grade1.py
-                score, breakdown = grade_submission(code)
-                
-                # Create full submission record with all assignments and quizzes initialized to 0
-                submission = {
-                    'Full Name': name,
-                    'Email': email,
-                    'Student ID': student_id if student_id else 'N/A'
-                }
-                
-                # Initialize all assignments to 0
-                for i in range(1, 16):  # Assignments 1-15
-                    submission[f'Assignment {i}'] = 0
-                
-                # Initialize all quizzes to 0
-                for i in range(1, 11):  # Quizzes 1-10
-                    submission[f'Quiz {i}'] = 0
-                
-                # Update Assignment 1 with actual score
-                submission['Assignment 1'] = score
-                
-                # Calculate total (sum of all assignments and quizzes)
-                total = score  # Currently only Assignment 1 has a score
-                submission['Total'] = total
-                
-                try:
-                    # Try to read existing CSV file
-                    df = pd.read_csv('grades/data_submission.csv')
+                output, error, local_vars = execute_code(code)
+                if error:
+                    st.error(f"Error in code execution: {error}")
+                else:
+                    submission = {
+                        'Full Name': name,
+                        'Student ID': student_id if student_id else 'N/A',
+                        'Email': email,
+                        'Assignment 1': 100,  # Placeholder score
+                        'Total': 100
+                    }
                     
-                    # Check if student already submitted
-                    existing_submission = df[
-                        (df['Email'] == email) & 
-                        (df['Student ID'] == submission['Student ID'])
-                    ]
+                    try:
+                        df = pd.read_csv('grades/data_submission.csv')
+                    except FileNotFoundError:
+                        df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
                     
-                    if not existing_submission.empty:
-                        # Update existing submission
-                        df.loc[existing_submission.index[0], 'Assignment 1'] = score
-                        df.loc[existing_submission.index[0], 'Total'] = df.loc[
-                            existing_submission.index[0],
-                            [col for col in df.columns if col.startswith(('Assignment ', 'Quiz '))]
-                        ].sum()
-                    else:
-                        # Add new submission
-                        df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
-                        
-                except FileNotFoundError:
-                    # Create new DataFrame with all required columns if file doesn't exist
-                    df = pd.DataFrame([submission])
-                
-                # Save to CSV
-                df.to_csv('grades/data_submission.csv', index=False)
-                
-                # Display grade and breakdown
-                st.success(f"Assignment submitted successfully! Grade: {score}/100")
-                
-                # Show detailed breakdown
-                st.markdown("### Grade Breakdown:")
-                
-                # Code Structure
-                st.markdown("**Code Structure and Implementation (30 points)**")
-                structure_score = sum(breakdown["Code Structure"].values())
-                st.write(f"- Imports: {breakdown['Code Structure']['Imports']:.1f}/5")
-                st.write(f"- Coordinates: {breakdown['Code Structure']['Coordinates']:.1f}/5")
-                st.write(f"- Execution: {breakdown['Code Structure']['Execution']}/10")
-                st.write(f"- Code Quality: {breakdown['Code Structure']['Code Quality']}/10")
-                st.write(f"Total Structure Score: {structure_score:.1f}/30")
-                
-                # Map Visualization
-                st.markdown("**Map Visualization (40 points)**")
-                st.write(f"Total Map Score: {breakdown['Map Visualization']}/40")
-                
-                # Distance Calculations
-                st.markdown("**Distance Calculations (30 points)**")
-                st.write(f"Total Distance Score: {breakdown['Distance Calculations']}/30")
-                
-                st.balloons()
-                
+                    df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                    df.to_csv('grades/data_submission.csv', index=False)
+                    
+                    st.success("Assignment submitted successfully!")
+                    st.balloons()
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
+
+# Display the map and distances
+if st.session_state.get('map_obj'):
+    st_folium(st.session_state.map_obj, width=800, height=500)
+    if st.session_state.get('distances'):
+        st.markdown("### 📏 Distance Report")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
+        col2.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
+        col3.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
