@@ -90,12 +90,11 @@ with tabs[0]:
                         st.session_state.distances = calculate_distances(COORDINATES)
                         break
 
-# Replace the submission handling code in as1.py
 
-# In the Submit tab section:
+
 with tabs[1]:
     if st.button("Submit", type="primary"):
-        if not name or not email or not student_id:  # Making student ID required
+        if not name or not email or not student_id:
             st.error("Please fill in all fields (Name, Email, and Student ID).")
         elif not code.strip():
             st.error("Please enter your code before submitting.")
@@ -106,51 +105,54 @@ with tabs[1]:
                 if error:
                     st.error(f"Error in code execution: {error}")
                 else:
-                    # Calculate grade using the grading module
+                    # Calculate grade
                     grade, _ = grade_submission(code)
                     
+                    # Prepare the data row
+                    new_row = {
+                        'fullname': name,
+                        'email': email,
+                        'studentID': student_id
+                    }
+                    
+                    # Initialize all assignment and quiz columns to 0
+                    for i in range(1, 16):  # assignments 1-15
+                        new_row[f'assignment{i}'] = 0
+                    for i in range(1, 11):  # quizzes 1-10
+                        new_row[f'quiz{i}'] = 0
+                        
+                    # Set the current assignment grade
+                    new_row['assignment1'] = grade
+                    
+                    # Calculate total
+                    total = sum(new_row[f'assignment{i}'] for i in range(1, 16)) + \
+                           sum(new_row[f'quiz{i}'] for i in range(1, 11))
+                    new_row['total'] = total
+
                     try:
-                        # Read existing CSV with all columns
+                        # Read existing CSV
                         df = pd.read_csv('grades/data_submission.csv')
                         
-                        # Create new submission row with all required columns
-                        new_submission = {
-                            'fullname': name,
-                            'email': email,
-                            'studentID': student_id,
-                            'assignment1': grade
-                        }
-                        
-                        # Fill other assignments and quizzes with 0 or NaN
-                        for col in df.columns:
-                            if col not in new_submission:
-                                new_submission[col] = 0  # or np.nan if you prefer
-                                
                         # Check if student already exists
-                        existing_student = df[df['studentID'] == student_id]
-                        
-                        if not existing_student.empty:
-                            # Update existing student's assignment1 grade
-                            df.loc[df['studentID'] == student_id, 'assignment1'] = grade
+                        student_mask = df['studentID'] == student_id
+                        if student_mask.any():
+                            # Update existing student's assignment1
+                            df.loc[student_mask, 'assignment1'] = grade
+                            # Recalculate total
+                            assignments_sum = df.loc[student_mask, [f'assignment{i}' for i in range(1, 16)]].sum(axis=1)
+                            quizzes_sum = df.loc[student_mask, [f'quiz{i}' for i in range(1, 11)]].sum(axis=1)
+                            df.loc[student_mask, 'total'] = assignments_sum + quizzes_sum
                         else:
                             # Add new student
-                            df = pd.concat([df, pd.DataFrame([new_submission])], ignore_index=True)
+                            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
                         
-                        # Calculate total (sum of all assignments and quizzes)
-                        assignment_cols = [col for col in df.columns if col.startswith('assignment')]
-                        quiz_cols = [col for col in df.columns if col.startswith('quiz')]
-                        df['total'] = df[assignment_cols + quiz_cols].sum(axis=1)
-                        
-                        # Save updated dataframe
+                        # Save to CSV
                         df.to_csv('grades/data_submission.csv', index=False)
-                        
                         st.success(f"Assignment submitted successfully! Grade: {grade}/100")
                         st.balloons()
                         
-                    except FileNotFoundError:
-                        st.error("Error: Grades file not found. Please contact your instructor.")
                     except Exception as e:
-                        st.error(f"Error saving submission: {str(e)}")
+                        st.error(f"Error saving to CSV: {str(e)}")
                         
             except Exception as e:
                 st.error(f"Error processing submission: {str(e)}")
