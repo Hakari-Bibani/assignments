@@ -6,3 +6,4 @@ numpy
 geopandas
 streamlit-folium
 IPython
+PyGithub
