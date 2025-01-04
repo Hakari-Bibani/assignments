@@ -89,89 +89,67 @@ with tabs[0]:
                         st.session_state.distances = calculate_distances(COORDINATES)
                         break
 
+# Replace the submission handling code in as1.py
+
+# In the Submit tab section:
 with tabs[1]:
     if st.button("Submit", type="primary"):
-        if not name or not email or not student_id:
+        if not name or not email or not student_id:  # Making student ID required
             st.error("Please fill in all fields (Name, Email, and Student ID).")
         elif not code.strip():
             st.error("Please enter your code before submitting.")
         else:
             try:
+                # Execute and grade the code
                 output, error, local_vars = execute_code(code)
                 if error:
                     st.error(f"Error in code execution: {error}")
                 else:
-                    # Import grading function
-                    grades_path = os.path.join(os.path.dirname(__file__), '..', 'grades')
-                    sys.path.append(grades_path)
-                    from grade1 import grade_submission
-                    
-                    # Get the grade and breakdown
-                    grade, grade_details = grade_submission(code)
-                    
-                    # Create grades directory if it doesn't exist
-                    os.makedirs(grades_path, exist_ok=True)
-                    
-                    # Prepare submission data
-                    csv_path = os.path.join(grades_path, 'data_submission.csv')
-                    submission_data = {
-                        'Full name': [name],
-                        'email': [email],
-                        'student ID': [student_id],
-                        'assignment1': [grade],
-                        'total': [grade]
-                    }
+                    # Calculate grade using the grading module
+                    grade, _ = grade_submission(code)
                     
                     try:
-                        # Read existing CSV or create new DataFrame
-                        try:
-                            df = pd.read_csv(csv_path)
-                        except FileNotFoundError:
-                            df = pd.DataFrame(columns=[
-                                'Full name', 'email', 'student ID', 
-                                'assignment1', 'total'
-                            ])
+                        # Read existing CSV with all columns
+                        df = pd.read_csv('grades/data_submission.csv')
                         
-                        # Create new submission DataFrame
-                        new_submission = pd.DataFrame(submission_data)
+                        # Create new submission row with all required columns
+                        new_submission = {
+                            'fullname': name,
+                            'email': email,
+                            'studentID': student_id,
+                            'assignment1': grade
+                        }
                         
-                        # Check if student already submitted
-                        if student_id in df['Student ID'].values:
-                            # Update existing submission
-                            df.loc[df['Student ID'] == student_id] = new_submission.iloc[0]
-                            st.warning("Previous submission updated.")
+                        # Fill other assignments and quizzes with 0 or NaN
+                        for col in df.columns:
+                            if col not in new_submission:
+                                new_submission[col] = 0  # or np.nan if you prefer
+                                
+                        # Check if student already exists
+                        existing_student = df[df['studentID'] == student_id]
+                        
+                        if not existing_student.empty:
+                            # Update existing student's assignment1 grade
+                            df.loc[df['studentID'] == student_id, 'assignment1'] = grade
                         else:
-                            # Add new submission
-                            df = pd.concat([df, new_submission], ignore_index=True)
+                            # Add new student
+                            df = pd.concat([df, pd.DataFrame([new_submission])], ignore_index=True)
                         
-                        # Save to CSV
-                        df.to_csv(csv_path, index=False)
+                        # Calculate total (sum of all assignments and quizzes)
+                        assignment_cols = [col for col in df.columns if col.startswith('assignment')]
+                        quiz_cols = [col for col in df.columns if col.startswith('quiz')]
+                        df['total'] = df[assignment_cols + quiz_cols].sum(axis=1)
                         
-                        # Show success message with grade breakdown
-                        st.success(f"""
-                        Submission successful!
-                        Grade: {grade}/100
+                        # Save updated dataframe
+                        df.to_csv('grades/data_submission.csv', index=False)
                         
-                        Grade Breakdown:
-                        - Code Structure: {sum(grade_details['Code Structure'].values())}/30
-                        - Map Visualization: {grade_details['Map Visualization']}/40
-                        - Distance Calculations: {grade_details['Distance Calculations']}/30
-                        """)
+                        st.success(f"Assignment submitted successfully! Grade: {grade}/100")
                         st.balloons()
                         
+                    except FileNotFoundError:
+                        st.error("Error: Grades file not found. Please contact your instructor.")
                     except Exception as e:
                         st.error(f"Error saving submission: {str(e)}")
                         
             except Exception as e:
-                st.error(f"Error during submission: {str(e)}")
-
-# Display map and distances if they exist
-if st.session_state.get('map_obj'):
-    st_folium(st.session_state.map_obj, width=800, height=500)
-    
-    if st.session_state.get('distances'):
-        st.markdown("### 📏 Distance Report")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
-        col2.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
-        col3.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
+                st.error(f"Error processing submission: {str(e)}")
