@@ -4,6 +4,8 @@ from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 from pages.style1 import execute_code, display_output
+from grades.grade1 import grade_submission
+import os
 
 # Constants for coordinates
 COORDINATES = [
@@ -89,83 +91,65 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Grade the submission using grade1.py
-                score, breakdown = grade_submission(code)
+                # Grade the submission
+                grade, grade_details = grade_submission(code)
                 
-                # Create full submission record with all assignments and quizzes initialized to 0
-                submission = {
+                # Define all possible columns for the CSV
+                columns = [
+                    'Full Name', 'Email', 'Student ID',
+                    *[f'assignment{i}' for i in range(1, 16)],  # assignment1 to assignment15
+                    *[f'quiz{i}' for i in range(1, 11)],       # quiz1 to quiz10
+                    'total'
+                ]
+                
+                # Create a new submission entry with all columns initialized to 0
+                submission = {col: 0 for col in columns}
+                
+                # Update with student information
+                submission.update({
                     'Full Name': name,
                     'Email': email,
-                    'Student ID': student_id if student_id else 'N/A'
-                }
+                    'Student ID': student_id if student_id else 'N/A',
+                    'assignment1': grade  # Save grade in assignment1 column
+                })
                 
-                # Initialize all assignments to 0
-                for i in range(1, 16):  # Assignments 1-15
-                    submission[f'Assignment {i}'] = 0
-                
-                # Initialize all quizzes to 0
-                for i in range(1, 11):  # Quizzes 1-10
-                    submission[f'Quiz {i}'] = 0
-                
-                # Update Assignment 1 with actual score
-                submission['Assignment 1'] = score
-                
-                # Calculate total (sum of all assignments and quizzes)
-                total = score  # Currently only Assignment 1 has a score
-                submission['Total'] = total
+                # Calculate total (currently only assignment1)
+                submission['total'] = grade
                 
                 try:
+                    # Ensure grades directory exists
+                    os.makedirs('grades', exist_ok=True)
+                    
                     # Try to read existing CSV file
-                    df = pd.read_csv('grades/data_submission.csv')
+                    try:
+                        df = pd.read_csv('grades/data_submission.csv')
+                    except FileNotFoundError:
+                        # If file doesn't exist, create new DataFrame with all columns
+                        df = pd.DataFrame(columns=columns)
                     
-                    # Check if student already submitted
-                    existing_submission = df[
-                        (df['Email'] == email) & 
-                        (df['Student ID'] == submission['Student ID'])
-                    ]
+                    # Add new submission
+                    new_df = pd.DataFrame([submission])
+                    df = pd.concat([df, new_df], ignore_index=True)
                     
-                    if not existing_submission.empty:
-                        # Update existing submission
-                        df.loc[existing_submission.index[0], 'Assignment 1'] = score
-                        df.loc[existing_submission.index[0], 'Total'] = df.loc[
-                            existing_submission.index[0],
-                            [col for col in df.columns if col.startswith(('Assignment ', 'Quiz '))]
-                        ].sum()
-                    else:
-                        # Add new submission
-                        df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
-                        
-                except FileNotFoundError:
-                    # Create new DataFrame with all required columns if file doesn't exist
-                    df = pd.DataFrame([submission])
-                
-                # Save to CSV
-                df.to_csv('grades/data_submission.csv', index=False)
-                
-                # Display grade and breakdown
-                st.success(f"Assignment submitted successfully! Grade: {score}/100")
-                
-                # Show detailed breakdown
-                st.markdown("### Grade Breakdown:")
-                
-                # Code Structure
-                st.markdown("**Code Structure and Implementation (30 points)**")
-                structure_score = sum(breakdown["Code Structure"].values())
-                st.write(f"- Imports: {breakdown['Code Structure']['Imports']:.1f}/5")
-                st.write(f"- Coordinates: {breakdown['Code Structure']['Coordinates']:.1f}/5")
-                st.write(f"- Execution: {breakdown['Code Structure']['Execution']}/10")
-                st.write(f"- Code Quality: {breakdown['Code Structure']['Code Quality']}/10")
-                st.write(f"Total Structure Score: {structure_score:.1f}/30")
-                
-                # Map Visualization
-                st.markdown("**Map Visualization (40 points)**")
-                st.write(f"Total Map Score: {breakdown['Map Visualization']}/40")
-                
-                # Distance Calculations
-                st.markdown("**Distance Calculations (30 points)**")
-                st.write(f"Total Distance Score: {breakdown['Distance Calculations']}/30")
-                
-                st.balloons()
-                
+                    # Save to CSV
+                    df.to_csv('grades/data_submission.csv', index=False)
+                    
+                    # Display success message with grade
+                    st.success(f"Assignment submitted successfully! Grade: {grade}/100")
+                    
+                    # Display grade breakdown
+                    st.markdown("### Grade Breakdown:")
+                    for category, score in grade_details.items():
+                        if isinstance(score, dict):
+                            st.markdown(f"**{category}:**")
+                            for subcategory, subscore in score.items():
+                                st.markdown(f"- {subcategory}: {subscore:.2f} points")
+                        else:
+                            st.markdown(f"**{category}:** {score:.2f} points")
+                    
+                    st.balloons()
+                    
+                except Exception as e:
+                    st.error(f"Error saving submission: {str(e)}")
             except Exception as e:
-                st.error(f"Error submitting assignment: {str(e)}")
+                st.error(f"Error processing submission: {str(e)}")
