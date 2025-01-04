@@ -91,73 +91,67 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Get grade from grading function
-                score, breakdown = grade_submission(code)
-                
-                try:
-                    # Read existing CSV with all columns
+                # Execute and grade the code
+                output, error, local_vars = execute_code(code)
+                if error:
+                    st.error(f"Error in code execution: {error}")
+                else:
+                    # Import grading function
+                    from grades.grade1 import grade_submission
+                    
+                    # Get grade and breakdown
+                    grade, breakdown = grade_submission(code)
+                    
                     try:
+                        # Read existing CSV with all columns
                         df = pd.read_csv('grades/data_submission.csv')
                     except FileNotFoundError:
-                        # Create DataFrame with all required columns if file doesn't exist
-                        columns = ['Full Name', 'Email', 'Student ID'] + \
-                                [f'assignment{i}' for i in range(1, 16)] + \
-                                [f'quiz{i}' for i in range(1, 11)] + \
-                                ['total']
+                        # Create DataFrame with all required columns
+                        columns = [
+                            'Full name', 'email', 'student ID',
+                            *[f'assigment{i}' for i in range(1, 16)],
+                            *[f'quiz{i}' for i in range(1, 11)],
+                            'total'
+                        ]
                         df = pd.DataFrame(columns=columns)
                     
-                    # Create new submission row with all columns initialized to 0
-                    new_submission = {col: 0 for col in df.columns}  # Initialize all grade columns to 0
-                    
-                    # Update the basic info
-                    new_submission.update({
-                        'Full Name': name,
-                        'Email': email,
-                        'Student ID': student_id if student_id else 'N/A',
-                        'assignment1': score  # Update assignment1 with the actual grade
+                    # Create new submission row with all columns (filled with NaN where appropriate)
+                    new_submission = pd.DataFrame({
+                        'Full name': [name],
+                        'email': [email],
+                        'student ID': [student_id if student_id else 'N/A'],
+                        'assigment1': [grade],
+                        'total': [grade]  # For now, total is just assignment 1 grade
                     })
                     
-                    # Calculate new total (sum of all assignments and quizzes)
-                    assignment_cols = [f'assignment{i}' for i in range(1, 16)]
-                    quiz_cols = [f'quiz{i}' for i in range(1, 11)]
+                    # Add any missing columns from the original DataFrame
+                    for col in df.columns:
+                        if col not in new_submission.columns:
+                            new_submission[col] = float('nan')
                     
-                    # If student already exists, keep their other grades
-                    existing_student = df[df['Email'] == email]
-                    if not existing_student.empty:
-                        for col in assignment_cols + quiz_cols:
-                            if col != 'assignment1':  # Keep all grades except assignment1
-                                new_submission[col] = existing_student.iloc[0][col]
+                    # Ensure column order matches original DataFrame
+                    new_submission = new_submission[df.columns]
                     
-                    # Calculate total
-                    grade_cols = assignment_cols + quiz_cols
-                    new_submission['total'] = sum(new_submission[col] for col in grade_cols)
-                    
-                    # Remove existing record for this student if exists
-                    df = df[df['Email'] != email]
-                    
-                    # Add new submission
-                    df = pd.concat([df, pd.DataFrame([new_submission])], ignore_index=True)
+                    # Append new submission
+                    df = pd.concat([df, new_submission], ignore_index=True)
                     
                     # Save updated DataFrame
                     df.to_csv('grades/data_submission.csv', index=False)
                     
-                    # Display success message with grade and breakdown
-                    st.success(f"Assignment submitted successfully!")
-                    st.markdown(f"### Grade: {score}/100")
+                    # Display grade and success message
+                    st.success(f"Assignment submitted successfully! Grade: {grade}/100")
                     
-                    # Display grade breakdown
+                    # Show grade breakdown
                     st.markdown("### Grade Breakdown:")
-                    for category, points in breakdown.items():
-                        if isinstance(points, dict):
+                    for category, score in breakdown.items():
+                        if isinstance(score, dict):
                             st.markdown(f"**{category}:**")
-                            for subcategory, subpoints in points.items():
-                                st.markdown(f"- {subcategory}: {subpoints:.2f} points")
+                            for subcategory, subscore in score.items():
+                                st.markdown(f"- {subcategory}: {subscore:.2f} points")
                         else:
-                            st.markdown(f"**{category}:** {points:.2f} points")
+                            st.markdown(f"**{category}:** {score:.2f} points")
                     
                     st.balloons()
                     
-                except Exception as e:
-                    st.error(f"Error saving submission: {str(e)}")
             except Exception as e:
-                st.error(f"Error grading submission: {str(e)}")
+                st.error(f"Error submitting assignment: {str(e)}")
