@@ -12,8 +12,8 @@ COORDINATES = [
     (36.660477, 43.840174)   # Point 3
 ]
 
-# Function to calculate distances
 def calculate_distances(coords):
+    """Calculate distances between given coordinates."""
     try:
         dist1_2 = geodesic(coords[0], coords[1]).kilometers
         dist2_3 = geodesic(coords[1], coords[2]).kilometers
@@ -26,6 +26,64 @@ def calculate_distances(coords):
     except Exception as e:
         st.error(f"Error calculating distances: {str(e)}")
         return None
+
+def save_submission(name, email, student_id, score, file_path='grades/data_submission.csv'):
+    """
+    Save or update student submission data in the CSV file.
+    """
+    try:
+        # Input validation
+        if not name or not email:
+            return False, "Name and email are required"
+        
+        name = name.strip()
+        email = email.strip()
+        student_id = student_id.strip() if student_id else 'N/A'
+        
+        # Prepare submission data
+        submission = {
+            'Full name': name,
+            'email': email,
+            'student ID': student_id,
+            'assigment1': float(score)
+        }
+        
+        try:
+            # Try reading existing CSV
+            df = pd.read_csv(file_path)
+            
+            # Verify column structure
+            required_cols = ['Full name', 'email', 'student ID', 'assigment1', 'total']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                return False, f"CSV file missing required columns: {missing_cols}"
+                
+        except FileNotFoundError:
+            # Create new DataFrame if file doesn't exist
+            df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
+        
+        # Check for existing submission
+        if name in df['Full name'].values:
+            # Update existing record
+            df.loc[df['Full name'] == name, ['email', 'student ID', 'assigment1']] = \
+                [email, student_id, score]
+            update_msg = "Submission updated"
+        else:
+            # Add new record
+            new_row = pd.DataFrame([submission])
+            df = pd.concat([df, new_row], ignore_index=True)
+            update_msg = "New submission added"
+            
+        # Recalculate total column
+        df['total'] = df.filter(like='assigment').sum(axis=1)
+        
+        # Save to CSV
+        df.to_csv(file_path, index=False)
+        
+        return True, f"{update_msg} successfully"
+        
+    except Exception as e:
+        return False, f"Error saving submission: {str(e)}"
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -100,53 +158,26 @@ with tabs[0]:
         col2.metric("Points 2-3", f"{st.session_state['distances']['Distance 2-3']} km")
         col3.metric("Points 1-3", f"{st.session_state['distances']['Distance 1-3']} km")
 
-# Inside the submit tab of as1.py, replace the submission handling code with:
-
-# Inside the submit tab of as1.py, replace the submission handling code:
-
-# In the Submit tab section
-if st.button("Submit", type="primary"):
-    if not name or not email:
-        st.error("Please fill in both your Name and Email before submitting.")
-    elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
-        st.error("Please run your code and generate the map before submitting.")
-    else:
-        try:
-            # Grade the submission
-            from grades.grade1 import grade_submission
-            score, breakdown = grade_submission(code)
-
-            # Prepare submission dictionary with correct column names
-            submission = {
-                'Full Name': name.strip(),
-                'Email': email.strip(),
-                'Student ID': student_id.strip() if student_id else 'N/A',
-                'Assignment1': score
-            }
-
-            # Load existing data or create a new DataFrame
-            file_path = 'grades/data_submission.csv'
+with tabs[1]:
+    if st.button("Submit", type="primary"):
+        if not name or not email:
+            st.error("Please fill in both your Name and Email before submitting.")
+        elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
+            st.error("Please run your code and generate the map before submitting.")
+        else:
             try:
-                df = pd.read_csv(file_path)
-            except FileNotFoundError:
-                df = pd.DataFrame(columns=['Full Name', 'Email', 'Student ID', 'Assignment1'])
-
-            # Update or add the submission
-            if submission['Full Name'] in df['Full Name'].values:
-                # Update existing student's data
-                df.loc[df['Full Name'] == submission['Full Name'], 
-                      ['Email', 'Student ID', 'Assignment1']] = \
-                    [submission['Email'], submission['Student ID'], submission['Assignment1']]
-            else:
-                # Add new student data
-                new_row = pd.DataFrame([submission])
-                df = pd.concat([df, new_row], ignore_index=True)
-
-            # Save the updated DataFrame
-            df.to_csv(file_path, index=False)
-
-            # Confirm successful submission
-            st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
-            st.balloons()
-        except Exception as e:
-            st.error(f"❌ Error during submission: {str(e)}")
+                # Grade the submission
+                from grades.grade1 import grade_submission
+                score, breakdown = grade_submission(code)
+                
+                # Save the submission
+                success, message = save_submission(name, email, student_id, score)
+                
+                if success:
+                    st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+                    st.balloons()
+                else:
+                    st.error(f"❌ {message}")
+                    
+            except Exception as e:
+                st.error(f"❌ Error during submission: {str(e)}")
