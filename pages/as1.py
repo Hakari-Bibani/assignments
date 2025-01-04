@@ -1,3 +1,4 @@
+# pages/as1.py
 import streamlit as st
 import folium
 from geopy.distance import geodesic
@@ -6,8 +7,6 @@ from streamlit_folium import st_folium
 import sys
 from io import StringIO
 import contextlib
-import os
-from grade1 import grade_submission  # Import the grading function
 
 # Constants for coordinates
 COORDINATES = [
@@ -55,36 +54,6 @@ def execute_code(code_string):
             return output, None, local_vars
         except Exception as e:
             return None, str(e), None
-
-def save_submission(name, student_id, email, code, grade):
-    """Save submission to CSV file"""
-    # Ensure grades directory exists
-    os.makedirs('grades', exist_ok=True)
-    
-    # Create submission data
-    submission_data = {
-        'Full Name': [name],
-        'Student ID': [student_id],
-        'Email': [email],
-        'Assignment 1': [code],
-        'Grade': [grade],
-        'Total': [grade]  # Total is same as grade for single assignment
-    }
-    
-    filepath = 'grades/data_submission.csv'
-    
-    try:
-        # Try to read existing CSV
-        df = pd.read_csv(filepath)
-    except FileNotFoundError:
-        # Create new DataFrame if file doesn't exist
-        df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Grade', 'Total'])
-    
-    # Append new submission
-    new_df = pd.concat([df, pd.DataFrame(submission_data)], ignore_index=True)
-    # Save to CSV
-    new_df.to_csv(filepath, index=False)
-    return True
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -175,33 +144,32 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Grade the submission
-                score, breakdown = grade_submission(code)
+                # Execute code to get results
+                output, error, local_vars = execute_code(code)
                 
-                # Save the submission
-                if save_submission(name, student_id, email, code, score):
-                    # Display success message with grade and breakdown
-                    st.success(f"Assignment submitted successfully! Grade: {score}/100")
-                    
-                    # Display grading breakdown
-                    st.markdown("### Grading Breakdown:")
-                    
-                    # Code Structure
-                    st.markdown("#### 1. Code Structure and Implementation (30 points):")
-                    for category, points in breakdown["Code Structure"].items():
-                        st.write(f"- {category}: {points:.2f} points")
-                    
-                    # Map Visualization
-                    st.markdown("#### 2. Map Visualization (40 points):")
-                    st.write(f"- Total visualization points: {breakdown['Map Visualization']:.2f}")
-                    
-                    # Distance Calculations
-                    st.markdown("#### 3. Distance Calculations (30 points):")
-                    st.write(f"- Total calculation points: {breakdown['Distance Calculations']:.2f}")
-                    
-                    st.balloons()
+                if error:
+                    st.error(f"Error in code execution: {error}")
+                    st.error("Please fix the code before submitting.")
                 else:
-                    st.error("Error saving submission. Please try again.")
+                    # Save to CSV
+                    submission = {
+                        'Full Name': name,
+                        'Student ID': student_id if student_id else 'N/A',
+                        'Email': email,
+                        'Assignment 1': 100,  # Placeholder score
+                        'Total': 100  # Placeholder total
+                    }
+                    
+                    try:
+                        df = pd.read_csv('grades/data_submission.csv')
+                    except FileNotFoundError:
+                        df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
+                    
+                    df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                    df.to_csv('grades/data_submission.csv', index=False)
+                    
+                    st.success("Assignment submitted successfully!")
+                    st.balloons()
                     
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
