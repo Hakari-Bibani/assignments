@@ -72,26 +72,33 @@ with tabs[0]:
             st.markdown("### 📤 Output Cell")
             output, error, local_vars = execute_code(code)
             display_output(output, error)
-            
-            # Check for a folium map in local_vars
-            if local_vars:
-                for var in local_vars:
-                    if isinstance(local_vars[var], folium.Map):
-                        st.session_state['map_obj'] = local_vars[var]
-                        st.session_state['distances'] = calculate_distances(COORDINATES)
-                        break
 
-            # Display the map and distances after running code
-            if st.session_state.get('map_obj'):
-                st_folium(st.session_state['map_obj'], width=800, height=500)
-                if st.session_state.get('distances'):
-                    st.markdown("### 📏 Distance Report")
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("Points 1-2", f"{st.session_state['distances']['Distance 1-2']} km")
-                    col2.metric("Points 2-3", f"{st.session_state['distances']['Distance 2-3']} km")
-                    col3.metric("Points 1-3", f"{st.session_state['distances']['Distance 1-3']} km")
-            else:
+            # Check for a folium map and distances
+            map_found = False
+            if local_vars:
+                for var_name, var_value in local_vars.items():
+                    if isinstance(var_value, folium.Map):
+                        st.session_state['map_obj'] = var_value
+                        st.session_state['distances'] = calculate_distances(COORDINATES)
+                        map_found = True
+                        break
+            
+            if not map_found:
                 st.warning("No map object found in your code.")
+        else:
+            st.error("Please enter your code before running.")
+
+    # Display the map and distances if available in st.session_state
+    if 'map_obj' in st.session_state:
+        st.markdown("### 🗺️ Generated Map")
+        st_folium(st.session_state['map_obj'], width=800, height=500)
+
+    if 'distances' in st.session_state:
+        st.markdown("### 📏 Distance Report")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Points 1-2", f"{st.session_state['distances']['Distance 1-2']} km")
+        col2.metric("Points 2-3", f"{st.session_state['distances']['Distance 2-3']} km")
+        col3.metric("Points 1-3", f"{st.session_state['distances']['Distance 1-3']} km")
 
 
 with tabs[1]:
