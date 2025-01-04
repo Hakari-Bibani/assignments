@@ -114,11 +114,15 @@ with tabs[1]:
 
                 # Prepare submission dictionary
                 submission = {
-                    'Full name': name.strip(),
+                    'fullname': name.strip(),
                     'email': email.strip(),
-                    'student ID': student_id.strip() if student_id else 'N/A',
+                    'studentID': student_id.strip() if student_id else 'N/A',
                     'assigment1': score
                 }
+
+                # Ensure the 'grades' directory exists
+                import os
+                os.makedirs('grades', exist_ok=True)
 
                 # Load existing data or create a new DataFrame
                 file_path = 'grades/data_submission.csv'
@@ -126,28 +130,36 @@ with tabs[1]:
                     # Try reading the existing CSV
                     df = pd.read_csv(file_path)
                 except FileNotFoundError:
-                    # Create a new DataFrame if the file does not exist
-                    df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
+                    # Create a new DataFrame with all required columns
+                    columns = [
+                        'fullname', 'email', 'studentID', 'assigment1', 'assigment2', 'assigment3', 
+                        'assigment4', 'assigment5', 'assigment6', 'assigment7', 'assigment8', 
+                        'assigment9', 'assigment10', 'assigment11', 'assigment12', 'assigment13', 
+                        'assigment14', 'assigment15', 'quiz1', 'quiz2', 'quiz3', 'quiz4', 'quiz5', 
+                        'quiz6', 'quiz7', 'quiz8', 'quiz9', 'quiz10', 'total'
+                    ]
+                    df = pd.DataFrame(columns=columns)
 
-                # Ensure all required columns exist in the DataFrame
-                required_columns = ['Full name', 'email', 'student ID', 'assigment1', 'total']
-                for col in required_columns:
-                    if col not in df.columns:
-                        df[col] = None  # Add missing columns with null values
+                # Debug: Print DataFrame before update
+                st.write("DataFrame Before Update:", df)
 
                 # Check if the student already exists in the DataFrame
-                if submission['Full name'] in df['Full name'].values:
+                if submission['fullname'] in df['fullname'].values:
                     # Update existing student's data
-                    df.loc[df['Full name'] == submission['Full name'], ['email', 'student ID', 'assigment1']] = \
-                        [submission['email'], submission['student ID'], submission['assigment1']]
+                    df.loc[df['fullname'] == submission['fullname'], ['email', 'studentID', 'assigment1']] = \
+                        [submission['email'], submission['studentID'], submission['assigment1']]
                 else:
                     # Add new student data
-                    new_row = pd.DataFrame([submission])
-                    df = pd.concat([df, new_row], ignore_index=True)
+                    new_row = {col: submission.get(col, None) for col in df.columns}
+                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
-                # Recalculate the 'total' column as the sum of assignment scores
+                # Recalculate the 'total' column as the sum of all assignment and quiz columns
                 assignment_columns = [col for col in df.columns if col.startswith('assigment')]
-                df['total'] = df[assignment_columns].sum(axis=1)
+                quiz_columns = [col for col in df.columns if col.startswith('quiz')]
+                df['total'] = df[assignment_columns + quiz_columns].sum(axis=1)
+
+                # Debug: Print DataFrame after update
+                st.write("DataFrame After Update:", df)
 
                 # Save the updated DataFrame back to the CSV file
                 df.to_csv(file_path, index=False)
@@ -157,3 +169,4 @@ with tabs[1]:
                 st.balloons()
             except Exception as e:
                 st.error(f"❌ Error during submission: {str(e)}")
+                st.error("Please check the 'grades' directory and file permissions.")
