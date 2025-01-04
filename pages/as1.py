@@ -1,4 +1,3 @@
-# pages/as1.py
 import streamlit as st
 import folium
 from geopy.distance import geodesic
@@ -7,6 +6,11 @@ from streamlit_folium import st_folium
 import sys
 from io import StringIO
 import contextlib
+import os
+
+# Import grading function
+sys.path.append('../grades')
+from grade1 import grade_submission
 
 # Constants for coordinates
 COORDINATES = [
@@ -136,7 +140,7 @@ with tabs[0]:
                             st.session_state.distances = calculate_distances(COORDINATES)
                             break
 
-with tabs[1]:
+ith tabs[1]:
     if st.button("Submit", type="primary"):
         if not name or not email:
             st.error("Please fill in Name and Email before submitting.")
@@ -144,35 +148,64 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Execute code to get results
-                output, error, local_vars = execute_code(code)
+                # Grade the submission
+                score, breakdown = grade_submission(code)
+
+                # Create submission data
+                submission_data = {
+                    'Full Name': [name],
+                    'Student ID': [student_id if student_id else 'N/A'],
+                    'Email': [email],
+                    'Assignment 1': [score],
+                    'Total': [score]
+                }
+
+                # Ensure grades directory exists
+                os.makedirs('grades', exist_ok=True)
                 
-                if error:
-                    st.error(f"Error in code execution: {error}")
-                    st.error("Please fix the code before submitting.")
-                else:
-                    # Save to CSV
-                    submission = {
-                        'Full Name': name,
-                        'Student ID': student_id if student_id else 'N/A',
-                        'Email': email,
-                        'Assignment 1': 100,  # Placeholder score
-                        'Total': 100  # Placeholder total
-                    }
-                    
-                    try:
-                        df = pd.read_csv('grades/data_submission.csv')
-                    except FileNotFoundError:
-                        df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
-                    
-                    df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
-                    df.to_csv('grades/data_submission.csv', index=False)
-                    
-                    st.success("Assignment submitted successfully!")
-                    st.balloons()
-                    
+                # Save to CSV
+                try:
+                    # Try to read existing CSV
+                    df = pd.read_csv('grades/data_submission.csv')
+                except FileNotFoundError:
+                    # If file doesn't exist, create new DataFrame
+                    df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 
+                                            'Assignment 1', 'Total'])
+                
+                # Add new submission
+                new_df = pd.DataFrame(submission_data)
+                df = pd.concat([df, new_df], ignore_index=True)
+                
+                # Save to CSV
+                df.to_csv('grades/data_submission.csv', index=False)
+
+                # Display success message with score
+                st.success(f"Assignment submitted successfully! Your grade: {score}/100")
+
+                # Display score breakdown
+                st.markdown("### Grade Breakdown:")
+                
+                # Code Structure
+                st.markdown("#### 1. Code Structure and Implementation (30 points):")
+                code_structure = breakdown['Code Structure']
+                st.write(f"- Library Imports: {code_structure['Imports']:.1f}/5")
+                st.write(f"- Coordinate Handling: {code_structure['Coordinates']:.1f}/5")
+                st.write(f"- Code Execution: {code_structure['Execution']:.1f}/10")
+                st.write(f"- Code Quality: {code_structure['Code Quality']:.1f}/10")
+
+                # Map Visualization
+                st.markdown("#### 2. Map Visualization (40 points):")
+                st.write(f"- Score: {breakdown['Map Visualization']:.1f}/40")
+
+                # Distance Calculations
+                st.markdown("#### 3. Distance Calculations (30 points):")
+                st.write(f"- Score: {breakdown['Distance Calculations']:.1f}/30")
+
+                st.balloons()
+                
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
+                st.error("Please try again or contact support if the problem persists.")
 
 # Always display the map and distances if they exist in session state
 if st.session_state.map_obj:
