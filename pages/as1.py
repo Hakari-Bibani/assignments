@@ -4,6 +4,8 @@ from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
+import sys  # Added this import
+import os   # Added for path handling
 
 # Constants for coordinates
 COORDINATES = [
@@ -91,7 +93,7 @@ with tabs[0]:
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
-        if not name or not email or not student_id:  # Made student_id required
+        if not name or not email or not student_id:
             st.error("Please fill in all fields (Name, Email, and Student ID).")
         elif not code.strip():
             st.error("Please enter your code before submitting.")
@@ -102,8 +104,9 @@ with tabs[1]:
                 if error:
                     st.error(f"Error in code execution: {error}")
                 else:
-                    # Import grading function
-                    sys.path.append('grades')
+                    # Add grades directory to Python path
+                    grades_path = os.path.join(os.path.dirname(__file__), '..', 'grades')
+                    sys.path.append(grades_path)
                     from grade1 import grade_submission
                     
                     # Get the grade and breakdown
@@ -115,13 +118,14 @@ with tabs[1]:
                         'Email': email,
                         'Student ID': student_id,
                         'Assignment 1': grade,
-                        'Total': grade  # Total is same as Assignment 1 for now
+                        'Total': grade
                     }
                     
                     try:
                         # Read existing CSV or create new if doesn't exist
+                        csv_path = os.path.join(grades_path, 'data_submission.csv')
                         try:
-                            df = pd.read_csv('grades/data_submission.csv')
+                            df = pd.read_csv(csv_path)
                         except FileNotFoundError:
                             df = pd.DataFrame(columns=[
                                 'Full Name', 'Email', 'Student ID', 
@@ -137,7 +141,7 @@ with tabs[1]:
                             df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
                         
                         # Save to CSV
-                        df.to_csv('grades/data_submission.csv', index=False)
+                        df.to_csv(csv_path, index=False)
                         
                         # Show success message with grade breakdown
                         st.success(f"""
