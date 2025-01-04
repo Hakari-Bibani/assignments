@@ -5,7 +5,8 @@ import pandas as pd
 from streamlit_folium import st_folium
 import os
 import sys
-from pathlib import Path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'grades'))
+from grade1 import grade_submission
 
 # Constants for coordinates
 COORDINATES = [
@@ -29,23 +30,20 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
-# Function to get grades directory path
-def get_grades_path():
-    current_dir = Path(__file__).parent.parent
-    grades_dir = current_dir / 'grades'
-    return grades_dir / 'data_submission.csv'
+# Function to ensure grades directory exists
+def ensure_grades_dir():
+    os.makedirs('grades', exist_ok=True)
+    if not os.path.exists('grades/data_submission.csv'):
+        pd.DataFrame(columns=[
+            'Full Name', 'Student ID', 'Email', 
+            'Assignment 1', 'Grade', 'Grading_Details', 'Total'
+        ]).to_csv('grades/data_submission.csv', index=False)
 
-# Setup paths and import grading function
-grades_path = get_grades_path()
-if not grades_path.parent.exists():
-    grades_path.parent.mkdir(parents=True)
-
-sys.path.append(str(grades_path.parent))
-try:
-    from grade1 import grade_submission
-except ImportError as e:
-    st.error(f"Failed to import grading module: {e}")
-    grade_submission = None
+# Initialize session state if needed
+if 'map_obj' not in st.session_state:
+    st.session_state.map_obj = None
+if 'distances' not in st.session_state:
+    st.session_state.distances = None
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -90,19 +88,33 @@ with tabs[0]:
     if st.button("▶ Run", type="primary"):
         if code.strip():
             st.markdown("### 📤 Output Cell")
+            
+            # Execute code in a safe environment
             try:
-                # Create a local namespace for execution
-                local_dict = {}
-                exec(code, {'folium': folium, 'geodesic': geodesic}, local_dict)
+                # Create a new namespace for execution
+                local_namespace = {
+                    'folium': folium,
+                    'geodesic': geodesic,
+                    'COORDINATES': COORDINATES
+                }
                 
-                # Store map and distances in session state
-                for var in local_dict:
-                    if isinstance(local_dict[var], folium.Map):
-                        st.session_state.map_obj = local_dict[var]
-                        st.session_state.distances = calculate_distances(COORDINATES)
+                # Execute the code
+                exec(code, local_namespace)
+                
+                # Look for map object in namespace
+                map_obj = None
+                for var in local_namespace.values():
+                    if isinstance(var, folium.Map):
+                        map_obj = var
                         break
                 
-                st.success("Code executed successfully!")
+                if map_obj:
+                    st.session_state.map_obj = map_obj
+                    st.session_state.distances = calculate_distances(COORDINATES)
+                    st.success("Code executed successfully!")
+                else:
+                    st.warning("No map object found in the output.")
+                    
             except Exception as e:
                 st.error(f"Error executing code: {str(e)}")
 
@@ -112,51 +124,52 @@ with tabs[1]:
             st.error("Please fill in Name and Email before submitting.")
         elif not code.strip():
             st.error("Please enter your code before submitting.")
-        elif grade_submission is None:
-            st.error("Grading module is not available. Please contact your instructor.")
         else:
             try:
-                # Grade the submission
-                grade, grade_details = grade_submission(code)
+                # Ensure grades directory exists
+                ensure_grades_dir()
                 
-                # Read existing CSV file
-                csv_path = get_grades_path()
+                # Grade the submission
+                grade, grading_details = grade_submission(code)
+                
+                # Prepare submission data
+                submission = {
+                    'Full Name': name,
+                    'Student ID': student_id if student_id else 'N/A',
+                    'Email': email,
+                    'Assignment 1': code,
+                    'Grade': grade,
+                    'Grading_Details': str(grading_details),
+                    'Total': grade
+                }
+                
+                # Read existing submissions
                 try:
-                    df = pd.read_csv(csv_path)
-                except (FileNotFoundError, pd.errors.EmptyDataError):
-                    # Create DataFrame with correct columns if file doesn't exist
-                    df = pd.DataFrame(columns=[
-                        'Full Name', 'Student ID', 'Email', 
-                        'Assignment 1', 'Total'
-                    ])
-
-                # Create new submission row
-                new_submission = pd.DataFrame({
-                    'Full Name': [name],
-                    'Student ID': [student_id if student_id else 'N/A'],
-                    'Email': [email],
-                    'Assignment 1': [code],
-                    'Total': [grade]
-                })
-
-                # Remove previous submission if exists
-                if not df.empty and 'Email' in df.columns:
-                    df = df[df['Email'] != email]
-
-                # Append new submission
-                df = pd.concat([df, new_submission], ignore_index=True)
-
-                # Save to CSV
-                df.to_csv(csv_path, index=False)
+                    df = pd.read_csv('grades/data_submission.csv')
+                except FileNotFoundError:
+                    df = pd.DataFrame(columns=submission.keys())
+                
+                # Add new submission
+                df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                df.to_csv('grades/data_submission.csv', index=False)
                 
                 # Display results
-                st.success(f"Assignment submitted successfully! Your grade is: {grade}/100")
-                st.json(grade_details)
+                st.success(f"Assignment submitted successfully! Your grade: {grade}/100")
+                
+                # Show grading breakdown
+                st.markdown("### Grading Breakdown")
+                for category, details in grading_details.items():
+                    if isinstance(details, dict):
+                        st.write(f"**{category}:**")
+                        for subcategory, score in details.items():
+                            st.write(f"- {subcategory}: {score:.2f} points")
+                    else:
+                        st.write(f"**{category}:** {details:.2f} points")
+                
                 st.balloons()
                 
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
-                st.error(f"Error details: {type(e).__name__}: {str(e)}")
 
 # Display the map and distances
 if st.session_state.get('map_obj'):
