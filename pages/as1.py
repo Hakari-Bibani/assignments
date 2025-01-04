@@ -3,7 +3,16 @@ import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
-from pages.style1 import execute_code, display_output
+import os
+import sys
+from pathlib import Path
+
+# Add the grades directory to system path
+grades_dir = Path(__file__).parent.parent / 'grades'
+sys.path.append(str(grades_dir))
+
+# Import the grading function
+from grade1 import grade_submission
 
 # Constants for coordinates
 COORDINATES = [
@@ -27,13 +36,20 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
+# Ensure grades directory exists
+def ensure_grades_directory():
+    grades_path = Path(__file__).parent.parent / 'grades'
+    if not grades_path.exists():
+        grades_path.mkdir(parents=True)
+    return grades_path / 'data_submission.csv'
+
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 
 # Student Information
 name = st.text_input("Full Name")
 email = st.text_input("Email")
-student_id = st.text_input("Student ID")
+student_id = st.text_input("Student ID (Optional)")
 
 # Assignment Details Accordion
 with st.expander("Assignment Details", expanded=True):
@@ -63,6 +79,10 @@ code = st.text_area(
     help="Write or paste your Python code that implements the required functionality"
 )
 
+# Initialize session state for submission status
+if 'submitted' not in st.session_state:
+    st.session_state.submitted = False
+
 # Tabbed interface for Run/Submit
 tabs = st.tabs(["Run Cell", "Submit Assignment"])
 
@@ -70,16 +90,21 @@ with tabs[0]:
     if st.button("▶ Run", type="primary"):
         if code.strip():
             st.markdown("### 📤 Output Cell")
-            output, error, local_vars = execute_code(code)
-            display_output(output, error)
-            
-            # Store map and distances in session state
-            if local_vars:
-                for var in local_vars:
-                    if isinstance(local_vars[var], folium.Map):
-                        st.session_state.map_obj = local_vars[var]
+            try:
+                # Create a local namespace for execution
+                local_dict = {}
+                exec(code, {'folium': folium, 'geodesic': geodesic}, local_dict)
+                
+                # Store map and distances in session state
+                for var in local_dict:
+                    if isinstance(local_dict[var], folium.Map):
+                        st.session_state.map_obj = local_dict[var]
                         st.session_state.distances = calculate_distances(COORDINATES)
                         break
+                
+                st.success("Code executed successfully!")
+            except Exception as e:
+                st.error(f"Error executing code: {str(e)}")
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
@@ -89,28 +114,47 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                output, error, local_vars = execute_code(code)
-                if error:
-                    st.error(f"Error in code execution: {error}")
-                else:
-                    submission = {
-                        'Full Name': name,
-                        'Student ID': student_id if student_id else 'N/A',
-                        'Email': email,
-                        'Assignment 1': 100,  # Placeholder score
-                        'Total': 100
-                    }
-                    
-                    try:
-                        df = pd.read_csv('grades/data_submission.csv')
-                    except FileNotFoundError:
-                        df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
-                    
-                    df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
-                    df.to_csv('grades/data_submission.csv', index=False)
-                    
-                    st.success("Assignment submitted successfully!")
-                    st.balloons()
+                # Grade the submission
+                grade, grade_details = grade_submission(code)
+                
+                # Prepare submission data
+                submission = {
+                    'Full Name': name,
+                    'Student ID': student_id if student_id else 'N/A',
+                    'Email': email,
+                    'Assignment 1': code,
+                    'Grade': grade,
+                    'Grading_Details': str(grade_details),
+                    'Total': grade
+                }
+                
+                # Get the CSV file path
+                csv_path = ensure_grades_directory()
+                
+                # Read existing data or create new DataFrame
+                try:
+                    df = pd.read_csv(csv_path)
+                except FileNotFoundError:
+                    df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Grade', 'Grading_Details', 'Total'])
+                
+                # Check if student already submitted
+                if df['Email'].str.lower().eq(email.lower()).any():
+                    st.warning("You have already submitted this assignment. This submission will update your previous submission.")
+                    df = df[~df['Email'].str.lower().eq(email.lower())]
+                
+                # Add new submission
+                df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                
+                # Save to CSV
+                df.to_csv(csv_path, index=False)
+                
+                st.success(f"Assignment submitted successfully! Your grade is: {grade}/100")
+                st.json(grade_details)
+                st.balloons()
+                
+                # Update session state
+                st.session_state.submitted = True
+                
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
 
