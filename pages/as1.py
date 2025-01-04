@@ -73,13 +73,26 @@ with tabs[0]:
             output, error, local_vars = execute_code(code)
             display_output(output, error)
             
-            # Store map and distances in session state
+            # Check for a folium map in local_vars
             if local_vars:
                 for var in local_vars:
                     if isinstance(local_vars[var], folium.Map):
-                        st.session_state.map_obj = local_vars[var]
-                        st.session_state.distances = calculate_distances(COORDINATES)
+                        st.session_state['map_obj'] = local_vars[var]
+                        st.session_state['distances'] = calculate_distances(COORDINATES)
                         break
+
+            # Display the map and distances after running code
+            if st.session_state.get('map_obj'):
+                st_folium(st.session_state['map_obj'], width=800, height=500)
+                if st.session_state.get('distances'):
+                    st.markdown("### 📏 Distance Report")
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("Points 1-2", f"{st.session_state['distances']['Distance 1-2']} km")
+                    col2.metric("Points 2-3", f"{st.session_state['distances']['Distance 2-3']} km")
+                    col3.metric("Points 1-3", f"{st.session_state['distances']['Distance 1-3']} km")
+            else:
+                st.warning("No map object found in your code.")
+
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
@@ -129,4 +142,3 @@ with tabs[1]:
                 st.balloons()
             except Exception as e:
                 st.error(f"Error during submission: {str(e)}")
-
