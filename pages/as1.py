@@ -112,49 +112,66 @@ with tabs[1]:
                     # Create grades directory if it doesn't exist
                     os.makedirs(grades_path, exist_ok=True)
                     
-                    # Prepare the submission as a single row in a list
-                    submission_row = [{
-                        'Full name': name,
-                        'Email': email,
-                        'student ID': student_id,  # Changed to match CSV column name
-                        'Assignment1': grade,
-                        'Total': grade
-                    }]
-                    
-                    # Create DataFrame from the submission row
-                    new_submission = pd.DataFrame(submission_row)
-                    
+                    # Prepare submission data
                     csv_path = os.path.join(grades_path, 'data_submission.csv')
+                    submission_data = {
+                        'Full name': [name],
+                        'email': [email],
+                        'student ID': [student_id],
+                        'assignment1': [grade],
+                        'total': [grade]
+                    }
+                    
                     try:
-                        # Try to read existing CSV
-                        df = pd.read_csv(csv_path)
+                        # Read existing CSV or create new DataFrame
+                        try:
+                            df = pd.read_csv(csv_path)
+                        except FileNotFoundError:
+                            df = pd.DataFrame(columns=[
+                                'Full name', 'email', 'student ID', 
+                                'assignment1', 'total'
+                            ])
+                        
+                        # Create new submission DataFrame
+                        new_submission = pd.DataFrame(submission_data)
                         
                         # Check if student already submitted
-                        if student_id in df['student ID'].values:  # Changed to match CSV column name
+                        if student_id in df['Student ID'].values:
                             # Update existing submission
-                            df.loc[df['student ID'] == student_id] = new_submission.iloc[0]
+                            df.loc[df['Student ID'] == student_id] = new_submission.iloc[0]
                             st.warning("Previous submission updated.")
                         else:
                             # Add new submission
                             df = pd.concat([df, new_submission], ignore_index=True)
-                    except FileNotFoundError:
-                        # If file doesn't exist, use the new submission as the DataFrame
-                        df = new_submission
-                    
-                    # Save to CSV
-                    df.to_csv(csv_path, index=False)
-                    
-                    # Show success message with grade breakdown
-                    st.success(f"""
-                    Submission successful!
-                    Grade: {grade}/100
-                    
-                    Grade Breakdown:
-                    - Code Structure: {sum(grade_details['Code Structure'].values())}/30
-                    - Map Visualization: {grade_details['Map Visualization']}/40
-                    - Distance Calculations: {grade_details['Distance Calculations']}/30
-                    """)
-                    st.balloons()
-                    
+                        
+                        # Save to CSV
+                        df.to_csv(csv_path, index=False)
+                        
+                        # Show success message with grade breakdown
+                        st.success(f"""
+                        Submission successful!
+                        Grade: {grade}/100
+                        
+                        Grade Breakdown:
+                        - Code Structure: {sum(grade_details['Code Structure'].values())}/30
+                        - Map Visualization: {grade_details['Map Visualization']}/40
+                        - Distance Calculations: {grade_details['Distance Calculations']}/30
+                        """)
+                        st.balloons()
+                        
+                    except Exception as e:
+                        st.error(f"Error saving submission: {str(e)}")
+                        
             except Exception as e:
                 st.error(f"Error during submission: {str(e)}")
+
+# Display map and distances if they exist
+if st.session_state.get('map_obj'):
+    st_folium(st.session_state.map_obj, width=800, height=500)
+    
+    if st.session_state.get('distances'):
+        st.markdown("### 📏 Distance Report")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
+        col2.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
+        col3.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
