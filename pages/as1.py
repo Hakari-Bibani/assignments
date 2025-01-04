@@ -102,6 +102,8 @@ with tabs[0]:
 
 # Inside the submit tab of as1.py, replace the submission handling code with:
 
+# Inside the submit tab of as1.py, replace the submission handling code:
+
 with tabs[1]:
     if st.button("Submit", type="primary"):
         if not name or not email:
@@ -116,10 +118,10 @@ with tabs[1]:
 
                 # Prepare submission with exact column names
                 submission = {
-                    'Full name': name.strip(),
-                    'Email': email.strip(),
-                    'Student ID': student_id.strip() if student_id else 'N/A',
-                    'Assignment1': score
+                    'Full name': name.strip(),      # Ensure this matches exactly
+                    'email': email.strip(),         # lowercase 'email'
+                    'student ID': student_id.strip() if student_id else 'N/A',  # lowercase with space
+                    'assigment1': score           # This specific spelling
                 }
 
                 # Load or create CSV file
@@ -128,15 +130,18 @@ with tabs[1]:
                     df = pd.read_csv(file_path)
                 except FileNotFoundError:
                     # Create new DataFrame with exact column names
-                    df = pd.DataFrame(columns=['Full name', 'Email', 'Student ID', 'Assignment1'])
+                    df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1'])
 
-                # Check if student already exists
+                # Update or add new submission
                 if submission['Full name'] in df['Full name'].values:
                     # Update existing record
-                    df.loc[df['Full name'] == submission['Full name']] = submission
+                    mask = df['Full name'] == submission['Full name']
+                    for col in submission:
+                        df.loc[mask, col] = submission[col]
                 else:
                     # Add new record
-                    df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                    new_row = pd.DataFrame([submission])
+                    df = pd.concat([df, new_row], ignore_index=True)
 
                 # Save to CSV
                 df.to_csv(file_path, index=False)
