@@ -100,53 +100,82 @@ with tabs[0]:
         col2.metric("Points 2-3", f"{st.session_state['distances']['Distance 2-3']} km")
         col3.metric("Points 1-3", f"{st.session_state['distances']['Distance 1-3']} km")
 
-with tabs[1]:
-    if st.button("Submit", type="primary"):
-        if not name or not email:
-            st.error("Please fill in both your Name and Email before submitting.")
-        elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
-            st.error("Please run your code and generate the map before submitting.")
+def handle_submission(name: str, email: str, student_id: str, grade: float, file_path: str = 'grades/data_submission.csv') -> bool:
+    """
+    Handle student submission by saving or updating their information in the CSV file.
+    
+    Args:
+        name (str): Student's full name
+        email (str): Student's email
+        student_id (str): Student's ID (optional)
+        grade (float): Grade obtained out of 100
+        file_path (str): Path to the CSV file
+        
+    Returns:
+        bool: True if submission was successful, False otherwise
+    """
+    try:
+        import pandas as pd
+        
+        # Clean input data
+        submission = {
+            'Full name': name.strip(),
+            'email': email.strip(),
+            'student ID': student_id.strip() if student_id else 'N/A',
+            'assigment1': float(grade)
+        }
+        
+        try:
+            # Try reading existing CSV file
+            df = pd.read_csv(file_path)
+        except FileNotFoundError:
+            # Create new DataFrame if file doesn't exist
+            df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
+        
+        # Check if student already exists
+        if submission['Full name'] in df['Full name'].values:
+            # Update existing student's data
+            df.loc[df['Full name'] == submission['Full name'], 
+                  ['email', 'student ID', 'assigment1']] = [
+                      submission['email'],
+                      submission['student ID'],
+                      submission['assigment1']
+            ]
         else:
-            try:
-                # Grade the submission
-                from grades.grade1 import grade_submission
-                score, breakdown = grade_submission(code)
+            # Add new student data
+            new_row = pd.DataFrame([submission])
+            df = pd.concat([df, new_row], ignore_index=True)
+        
+        # Calculate total (sum of all assignment columns)
+        assignment_columns = [col for col in df.columns if col.startswith('assigment')]
+        df['total'] = df[assignment_columns].sum(axis=1)
+        
+        # Save updated DataFrame
+        df.to_csv(file_path, index=False)
+        return True
+        
+    except Exception as e:
+        print(f"Error during submission handling: {str(e)}")
+        return False
 
-                # Prepare submission dictionary
-                submission = {
-                    'Full name': name.strip(),
-                    'email': email.strip(),
-                    'student ID': student_id.strip() if student_id else 'N/A',
-                    'assigment1': score
-                }
-
-                # Load existing data or create a new DataFrame
-                file_path = 'grades/data_submission.csv'
-                try:
-                    # Try reading the existing CSV
-                    df = pd.read_csv(file_path)
-                except FileNotFoundError:
-                    # Create a new DataFrame if the file does not exist
-                    df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
-
-                # Update or add the submission
-                if submission['Full name'] in df['Full name'].values:
-                    # Update existing student's data
-                    df.loc[df['Full name'] == submission['Full name'], ['email', 'student ID', 'assigment1']] = \
-                        [submission['email'], submission['student ID'], submission['assigment1']]
-                else:
-                    # Add new student data
-                    new_row = pd.DataFrame([submission])
-                    df = pd.concat([df, new_row], ignore_index=True)
-
-                # Recalculate the 'total' column as the sum of assignment scores
-                df['total'] = df.filter(like='assigment').sum(axis=1)
-
-                # Save the updated DataFrame back to the CSV file
-                df.to_csv(file_path, index=False)
-
-                # Confirm successful submission
+# Usage in Streamlit app:
+if st.button("Submit", type="primary"):
+    if not name or not email:
+        st.error("Please fill in both your Name and Email before submitting.")
+    elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
+        st.error("Please run your code and generate the map before submitting.")
+    else:
+        try:
+            # Grade the submission
+            from grades.grade1 import grade_submission
+            score, breakdown = grade_submission(code)
+            
+            # Handle the submission
+            if handle_submission(name, email, student_id, score):
                 st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
                 st.balloons()
-            except Exception as e:
-                st.error(f"❌ Error during submission: {str(e)}")
+            else:
+                st.error("Failed to save submission. Please try again.")
+                
+        except Exception as e:
+            st.error(f"❌ Error during submission: {str(e)}")
