@@ -4,8 +4,6 @@ from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 from pages.style1 import execute_code, display_output
-from grades.grade1 import grade_submission
-import os
 
 # Constants for coordinates
 COORDINATES = [
@@ -91,44 +89,43 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Grade the submission
-                score, score_breakdown = grade_submission(code)
+                # Grade the student's code
+                from grades.grade1 import grade_submission
+                grade, breakdown = grade_submission(code)
                 
-                # Prepare submission data
+                # Display the student's grade
+                st.success(f"Your grade: {grade}/100")
+                
+                # Prepare the submission record
                 submission = {
                     'Full name': name,
                     'email': email,
                     'student ID': student_id if student_id else 'N/A',
-                    'assigment1': score,
-                    'total': score  # For this assignment, total equals assignment1 score
+                    'assigment1': grade,
+                    'total': grade  # Placeholder for now
                 }
                 
-                # Read existing CSV or create new DataFrame if file doesn't exist
+                # Load the CSV file or create a new DataFrame if it doesn't exist
                 try:
                     df = pd.read_csv('grades/data_submission.csv')
                 except FileNotFoundError:
                     df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
                 
-                # Append new submission
-                df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                # Update or add the submission record
+                if name in df['Full name'].values:
+                    # Update existing record
+                    df.loc[df['Full name'] == name, ['email', 'student ID', 'assigment1', 'total']] = [
+                        email, student_id if student_id else 'N/A', grade, grade
+                    ]
+                else:
+                    # Add new record
+                    df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
                 
-                # Save updated DataFrame
+                # Save the updated CSV file
                 df.to_csv('grades/data_submission.csv', index=False)
                 
-                # Display grade and success message
-                st.success(f"Assignment submitted successfully! Your grade: {score}/100")
-                
-                # Display detailed score breakdown
-                st.markdown("### Grade Breakdown:")
-                for category, points in score_breakdown.items():
-                    if isinstance(points, dict):
-                        st.markdown(f"**{category}:**")
-                        for subcategory, subpoints in points.items():
-                            st.markdown(f"- {subcategory}: {subpoints:.2f} points")
-                    else:
-                        st.markdown(f"**{category}:** {points:.2f} points")
-                
+                # Success message
+                st.success("Assignment submitted successfully!")
                 st.balloons()
-                
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
