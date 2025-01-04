@@ -4,8 +4,14 @@ from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
-import sys  # Added this import
-import os   # Added for path handling
+import sys
+import os
+
+# Initialize session state for map and distances
+if 'map_obj' not in st.session_state:
+    st.session_state.map_obj = None
+if 'distances' not in st.session_state:
+    st.session_state.distances = None
 
 # Constants for coordinates
 COORDINATES = [
@@ -56,7 +62,7 @@ with st.expander("Assignment Details", expanded=True):
        - Point 1 and Point 3
     """)
 
-# Code Input
+# Code Input with Colab-like styling
 st.markdown("### 📝 Code Cell")
 code = st.text_area(
     "",
@@ -74,22 +80,14 @@ with tabs[0]:
             st.markdown("### 📤 Output Cell")
             output, error, local_vars = execute_code(code)
             display_output(output, error)
-
-            # Check for a folium map and distances
-            map_found = False
-            if local_vars:
-                for var_name, var_value in local_vars.items():
-                    if isinstance(var_value, folium.Map):
-                        st.session_state['map_obj'] = var_value
-                        st.session_state['distances'] = calculate_distances(COORDINATES)
-                        map_found = True
-                        break
             
-            if not map_found:
-                st.warning("No map object found in your code.")
-        else:
-            st.error("Please enter your code before running.")
-# Modify the submission section in as1.py
+            # Store map and distances in session state
+            if local_vars:
+                for var in local_vars:
+                    if isinstance(local_vars[var], folium.Map):
+                        st.session_state.map_obj = local_vars[var]
+                        st.session_state.distances = calculate_distances(COORDINATES)
+                        break
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
@@ -99,12 +97,11 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Execute and grade the code
                 output, error, local_vars = execute_code(code)
                 if error:
                     st.error(f"Error in code execution: {error}")
                 else:
-                    # Add grades directory to Python path
+                    # Import grading function
                     grades_path = os.path.join(os.path.dirname(__file__), '..', 'grades')
                     sys.path.append(grades_path)
                     from grade1 import grade_submission
@@ -112,33 +109,40 @@ with tabs[1]:
                     # Get the grade and breakdown
                     grade, grade_details = grade_submission(code)
                     
+                    # Create grades directory if it doesn't exist
+                    os.makedirs(grades_path, exist_ok=True)
+                    
                     # Prepare submission data
-                    submission = {
-                        'Full Name': name,
-                        'Email': email,
-                        'Student ID': student_id,
-                        'Assignment 1': grade,
-                        'Total': grade
+                    csv_path = os.path.join(grades_path, 'data_submission.csv')
+                    submission_data = {
+                        'Full name': [name],
+                        'Email': [email],
+                        'Student ID': [student_id],
+                        'Assignment1': [grade],
+                        'Total': [grade]
                     }
                     
                     try:
-                        # Read existing CSV or create new if doesn't exist
-                        csv_path = os.path.join(grades_path, 'data_submission.csv')
+                        # Read existing CSV or create new DataFrame
                         try:
                             df = pd.read_csv(csv_path)
                         except FileNotFoundError:
                             df = pd.DataFrame(columns=[
-                                'Full Name', 'Email', 'Student ID', 
-                                'Assignment 1', 'Total'
+                                'Full name', 'Email', 'Student ID', 
+                                'Assignment1', 'Total'
                             ])
+                        
+                        # Create new submission DataFrame
+                        new_submission = pd.DataFrame(submission_data)
                         
                         # Check if student already submitted
                         if student_id in df['Student ID'].values:
-                            st.warning("You have already submitted. This will update your previous submission.")
-                            df.loc[df['Student ID'] == student_id] = submission
+                            # Update existing submission
+                            df.loc[df['Student ID'] == student_id] = new_submission.iloc[0]
+                            st.warning("Previous submission updated.")
                         else:
                             # Add new submission
-                            df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                            df = pd.concat([df, new_submission], ignore_index=True)
                         
                         # Save to CSV
                         df.to_csv(csv_path, index=False)
@@ -157,5 +161,17 @@ with tabs[1]:
                         
                     except Exception as e:
                         st.error(f"Error saving submission: {str(e)}")
+                        
             except Exception as e:
                 st.error(f"Error during submission: {str(e)}")
+
+# Display map and distances if they exist
+if st.session_state.get('map_obj'):
+    st_folium(st.session_state.map_obj, width=800, height=500)
+    
+    if st.session_state.get('distances'):
+        st.markdown("### 📏 Distance Report")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
+        col2.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
+        col3.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
