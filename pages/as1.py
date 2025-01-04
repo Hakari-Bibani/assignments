@@ -91,65 +91,73 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Grade the submission
-                grade, grade_details = grade_submission(code)
-                
-                # Define all possible columns for the CSV
-                columns = [
-                    'Full Name', 'Email', 'Student ID',
-                    *[f'assignment{i}' for i in range(1, 16)],  # assignment1 to assignment15
-                    *[f'quiz{i}' for i in range(1, 11)],       # quiz1 to quiz10
-                    'total'
-                ]
-                
-                # Create a new submission entry with all columns initialized to 0
-                submission = {col: 0 for col in columns}
-                
-                # Update with student information
-                submission.update({
-                    'Full Name': name,
-                    'Email': email,
-                    'Student ID': student_id if student_id else 'N/A',
-                    'assignment1': grade  # Save grade in assignment1 column
-                })
-                
-                # Calculate total (currently only assignment1)
-                submission['total'] = grade
+                # Get grade from grading function
+                score, breakdown = grade_submission(code)
                 
                 try:
-                    # Ensure grades directory exists
-                    os.makedirs('grades', exist_ok=True)
-                    
-                    # Try to read existing CSV file
+                    # Read existing CSV with all columns
                     try:
                         df = pd.read_csv('grades/data_submission.csv')
                     except FileNotFoundError:
-                        # If file doesn't exist, create new DataFrame with all columns
+                        # Create DataFrame with all required columns if file doesn't exist
+                        columns = ['Full Name', 'Email', 'Student ID'] + \
+                                [f'assignment{i}' for i in range(1, 16)] + \
+                                [f'quiz{i}' for i in range(1, 11)] + \
+                                ['total']
                         df = pd.DataFrame(columns=columns)
                     
-                    # Add new submission
-                    new_df = pd.DataFrame([submission])
-                    df = pd.concat([df, new_df], ignore_index=True)
+                    # Create new submission row with all columns initialized to 0
+                    new_submission = {col: 0 for col in df.columns}  # Initialize all grade columns to 0
                     
-                    # Save to CSV
+                    # Update the basic info
+                    new_submission.update({
+                        'Full Name': name,
+                        'Email': email,
+                        'Student ID': student_id if student_id else 'N/A',
+                        'assignment1': score  # Update assignment1 with the actual grade
+                    })
+                    
+                    # Calculate new total (sum of all assignments and quizzes)
+                    assignment_cols = [f'assignment{i}' for i in range(1, 16)]
+                    quiz_cols = [f'quiz{i}' for i in range(1, 11)]
+                    
+                    # If student already exists, keep their other grades
+                    existing_student = df[df['Email'] == email]
+                    if not existing_student.empty:
+                        for col in assignment_cols + quiz_cols:
+                            if col != 'assignment1':  # Keep all grades except assignment1
+                                new_submission[col] = existing_student.iloc[0][col]
+                    
+                    # Calculate total
+                    grade_cols = assignment_cols + quiz_cols
+                    new_submission['total'] = sum(new_submission[col] for col in grade_cols)
+                    
+                    # Remove existing record for this student if exists
+                    df = df[df['Email'] != email]
+                    
+                    # Add new submission
+                    df = pd.concat([df, pd.DataFrame([new_submission])], ignore_index=True)
+                    
+                    # Save updated DataFrame
                     df.to_csv('grades/data_submission.csv', index=False)
                     
-                    # Display success message with grade
-                    st.success(f"Assignment submitted successfully! Grade: {grade}/100")
+                    # Display success message with grade and breakdown
+                    st.success(f"Assignment submitted successfully!")
+                    st.markdown(f"### Grade: {score}/100")
                     
                     # Display grade breakdown
                     st.markdown("### Grade Breakdown:")
-                    for category, score in grade_details.items():
-                        if isinstance(score, dict):
+                    for category, points in breakdown.items():
+                        if isinstance(points, dict):
                             st.markdown(f"**{category}:**")
-                            for subcategory, subscore in score.items():
-                                st.markdown(f"- {subcategory}: {subscore:.2f} points")
+                            for subcategory, subpoints in points.items():
+                                st.markdown(f"- {subcategory}: {subpoints:.2f} points")
                         else:
-                            st.markdown(f"**{category}:** {score:.2f} points")
+                            st.markdown(f"**{category}:** {points:.2f} points")
                     
                     st.balloons()
                     
                 except Exception as e:
                     st.error(f"Error saving submission: {str(e)}")
             except Exception as e:
-                st.error(f"Error processing submission: {str(e)}")
+                st.error(f"Error grading submission: {str(e)}")
