@@ -1,8 +1,6 @@
-import streamlit as st
 import folium
 from geopy.distance import geodesic
 import pandas as pd
-from streamlit_folium import st_folium
 import sys
 from io import StringIO
 import contextlib
@@ -26,8 +24,7 @@ def calculate_distances(coords):
             'Distance 1-3': round(dist1_3, 2)
         }
     except Exception as e:
-        st.error(f"Error calculating distances: {str(e)}")
-        return None
+        return f"Error calculating distances: {str(e)}"
 
 # Function to capture print outputs
 @contextlib.contextmanager
@@ -53,23 +50,3 @@ def execute_code(code_string):
             return output, None, local_vars
         except Exception as e:
             return None, str(e), None
-
-# Store map object and distances in session state
-if 'map_obj' not in st.session_state:
-    st.session_state.map_obj = None
-if 'distances' not in st.session_state:
-    st.session_state.distances = None
-
-# Always display the map and distances if they exist in session state
-if st.session_state.map_obj:
-    st_folium(st.session_state.map_obj, width=800, height=500)
-    
-    if st.session_state.distances:
-        st.markdown("### 📏 Distance Report")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
-        with col2:
-            st.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
-        with col3:
-            st.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
