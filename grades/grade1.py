@@ -1,7 +1,5 @@
-import pandas as pd
-from geopy.distance import geodesic
 import folium
-import ast
+from geopy.distance import geodesic
 import re
 
 # Constants
