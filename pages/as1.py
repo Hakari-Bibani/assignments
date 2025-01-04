@@ -87,92 +87,71 @@ with tabs[0]:
                 st.warning("No map object found in your code.")
         else:
             st.error("Please enter your code before running.")
-
-
-import os
-import pathlib
+# Modify the submission section in as1.py
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
-        if not name or not email:
-            st.error("Please fill in both your Name and Email before submitting.")
-        elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
-            st.error("Please run your code and generate the map before submitting.")
+        if not name or not email or not student_id:  # Made student_id required
+            st.error("Please fill in all fields (Name, Email, and Student ID).")
+        elif not code.strip():
+            st.error("Please enter your code before submitting.")
         else:
             try:
-                # Get current working directory and construct absolute path
-                current_dir = os.getcwd()
-                st.write(f"Current working directory: {current_dir}")
-                
-                # Create grades directory if it doesn't exist
-                grades_dir = os.path.join(current_dir, 'grades')
-                os.makedirs(grades_dir, exist_ok=True)
-                st.write(f"Grades directory path: {grades_dir}")
-                
-                # Construct absolute file path
-                file_path = os.path.join(grades_dir, 'data_submission.csv')
-                st.write(f"Full file path: {file_path}")
-                
-                # Grade the submission
-                from grades.grade1 import grade_submission
-                score, breakdown = grade_submission(code)
-                
-                # Create submission data
-                data = {
-                    'Full name': [name.strip()],
-                    'email': [email.strip()],
-                    'student ID': [student_id.strip() if student_id else 'N/A'],
-                    'assigment1': [score],
-                    'total': [score]
-                }
-                
-                try:
-                    # Check if file exists and is readable
-                    if os.path.exists(file_path):
-                        st.write("Reading existing file...")
-                        existing_df = pd.read_csv(file_path)
-                        # Remove existing entry if present
-                        existing_df = existing_df[existing_df['Full name'] != name.strip()]
-                        # Add new submission
-                        new_df = pd.DataFrame(data)
-                        final_df = pd.concat([existing_df, new_df], ignore_index=True)
-                    else:
-                        st.write("Creating new file...")
-                        final_df = pd.DataFrame(data)
+                # Execute and grade the code
+                output, error, local_vars = execute_code(code)
+                if error:
+                    st.error(f"Error in code execution: {error}")
+                else:
+                    # Import grading function
+                    sys.path.append('grades')
+                    from grade1 import grade_submission
                     
-                    # Show data before saving
-                    st.write("Data to be saved:")
-                    st.write(final_df)
+                    # Get the grade and breakdown
+                    grade, grade_details = grade_submission(code)
                     
-                    # Save with absolute path
-                    final_df.to_csv(file_path, index=False)
+                    # Prepare submission data
+                    submission = {
+                        'Full Name': name,
+                        'Email': email,
+                        'Student ID': student_id,
+                        'Assignment 1': grade,
+                        'Total': grade  # Total is same as Assignment 1 for now
+                    }
                     
-                    # Verify save
-                    if os.path.exists(file_path):
-                        st.write(f"File size after save: {os.path.getsize(file_path)} bytes")
-                        verification_df = pd.read_csv(file_path)
-                        st.write("File contents after save:")
-                        st.write(verification_df)
+                    try:
+                        # Read existing CSV or create new if doesn't exist
+                        try:
+                            df = pd.read_csv('grades/data_submission.csv')
+                        except FileNotFoundError:
+                            df = pd.DataFrame(columns=[
+                                'Full Name', 'Email', 'Student ID', 
+                                'Assignment 1', 'Total'
+                            ])
                         
-                        st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+                        # Check if student already submitted
+                        if student_id in df['Student ID'].values:
+                            st.warning("You have already submitted. This will update your previous submission.")
+                            df.loc[df['Student ID'] == student_id] = submission
+                        else:
+                            # Add new submission
+                            df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+                        
+                        # Save to CSV
+                        df.to_csv('grades/data_submission.csv', index=False)
+                        
+                        # Show success message with grade breakdown
+                        st.success(f"""
+                        Submission successful!
+                        Grade: {grade}/100
+                        
+                        Grade Breakdown:
+                        - Code Structure: {sum(grade_details['Code Structure'].values())}/30
+                        - Map Visualization: {grade_details['Map Visualization']}/40
+                        - Distance Calculations: {grade_details['Distance Calculations']}/30
+                        """)
                         st.balloons()
-                    else:
-                        st.error("File was not created successfully")
                         
-                except Exception as e:
-                    st.error(f"Error handling file: {str(e)}")
-                    # Try to write to a different location
-                    alternative_path = os.path.join(current_dir, 'submission_data.csv')
-                    st.write(f"Attempting to write to alternative location: {alternative_path}")
-                    final_df.to_csv(alternative_path, index=False)
-                    
+                    except Exception as e:
+                        st.error(f"Error saving submission: {str(e)}")
             except Exception as e:
-                st.error(f"❌ Error during submission: {str(e)}")
-                import traceback
-                st.write("Full error:", traceback.format_exc())
-                
-            # List all files in current and grades directory
-            st.write("\nDirectory contents:")
-            st.write("Current directory:", os.listdir(current_dir))
-            if os.path.exists(grades_dir):
-                st.write("Grades directory:", os.listdir(grades_dir))
+                st.error(f"Error during submission: {str(e)}")
