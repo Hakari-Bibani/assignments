@@ -88,94 +88,78 @@ with tabs[0]:
         else:
             st.error("Please enter your code before running.")
 
-    # Display the map and distances if available in st.session_state
-    if 'map_obj' in st.session_state:
-        st.markdown("### 🗺️ Generated Map")
-        st_folium(st.session_state['map_obj'], width=800, height=500)
+    # Replace the submission code section with this:
 
-    if 'distances' in st.session_state:
-        st.markdown("### 📏 Distance Report")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Points 1-2", f"{st.session_state['distances']['Distance 1-2']} km")
-        col2.metric("Points 2-3", f"{st.session_state['distances']['Distance 2-3']} km")
-        col3.metric("Points 1-3", f"{st.session_state['distances']['Distance 1-3']} km")
-
-def handle_submission(name: str, email: str, student_id: str, grade: float, file_path: str = 'grades/data_submission.csv') -> bool:
-    """
-    Handle student submission by saving or updating their information in the CSV file.
-    
-    Args:
-        name (str): Student's full name
-        email (str): Student's email
-        student_id (str): Student's ID (optional)
-        grade (float): Grade obtained out of 100
-        file_path (str): Path to the CSV file
-        
-    Returns:
-        bool: True if submission was successful, False otherwise
-    """
-    try:
-        import pandas as pd
-        
-        # Clean input data
-        submission = {
-            'Full name': name.strip(),
-            'email': email.strip(),
-            'student ID': student_id.strip() if student_id else 'N/A',
-            'assigment1': float(grade)
-        }
-        
-        try:
-            # Try reading existing CSV file
-            df = pd.read_csv(file_path)
-        except FileNotFoundError:
-            # Create new DataFrame if file doesn't exist
-            df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
-        
-        # Check if student already exists
-        if submission['Full name'] in df['Full name'].values:
-            # Update existing student's data
-            df.loc[df['Full name'] == submission['Full name'], 
-                  ['email', 'student ID', 'assigment1']] = [
-                      submission['email'],
-                      submission['student ID'],
-                      submission['assigment1']
-            ]
+with tabs[1]:
+    if st.button("Submit", type="primary"):
+        if not name or not email:
+            st.error("Please fill in both your Name and Email before submitting.")
+        elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
+            st.error("Please run your code and generate the map before submitting.")
         else:
-            # Add new student data
-            new_row = pd.DataFrame([submission])
-            df = pd.concat([df, new_row], ignore_index=True)
-        
-        # Calculate total (sum of all assignment columns)
-        assignment_columns = [col for col in df.columns if col.startswith('assigment')]
-        df['total'] = df[assignment_columns].sum(axis=1)
-        
-        # Save updated DataFrame
-        df.to_csv(file_path, index=False)
-        return True
-        
-    except Exception as e:
-        print(f"Error during submission handling: {str(e)}")
-        return False
-
-# Usage in Streamlit app:
-if st.button("Submit", type="primary"):
-    if not name or not email:
-        st.error("Please fill in both your Name and Email before submitting.")
-    elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
-        st.error("Please run your code and generate the map before submitting.")
-    else:
-        try:
-            # Grade the submission
-            from grades.grade1 import grade_submission
-            score, breakdown = grade_submission(code)
-            
-            # Handle the submission
-            if handle_submission(name, email, student_id, score):
-                st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
-                st.balloons()
-            else:
-                st.error("Failed to save submission. Please try again.")
+            try:
+                # Debug message
+                st.write("Starting submission process...")
                 
-        except Exception as e:
-            st.error(f"❌ Error during submission: {str(e)}")
+                # Grade the submission
+                from grades.grade1 import grade_submission
+                score, breakdown = grade_submission(code)
+                st.write(f"Grade calculated: {score}")
+
+                # Create submission data
+                data = {
+                    'Full name': [name.strip()],
+                    'email': [email.strip()],
+                    'student ID': [student_id.strip() if student_id else 'N/A'],
+                    'assigment1': [score],
+                    'total': [score]  # Initialize total
+                }
+                
+                # Debug message
+                st.write("Created submission data...")
+
+                file_path = 'grades/data_submission.csv'
+                
+                try:
+                    # Try to read existing CSV
+                    st.write(f"Attempting to read {file_path}...")
+                    existing_df = pd.read_csv(file_path)
+                    st.write("Existing file read successfully")
+                    
+                    # Check if student exists and remove old entry
+                    existing_df = existing_df[existing_df['Full name'] != name.strip()]
+                    
+                    # Add new submission
+                    new_submission = pd.DataFrame(data)
+                    final_df = pd.concat([existing_df, new_submission], ignore_index=True)
+                    
+                except FileNotFoundError:
+                    st.write("No existing file found, creating new DataFrame...")
+                    final_df = pd.DataFrame(data)
+
+                # Debug: Show what we're about to save
+                st.write("Data to be saved:")
+                st.write(final_df)
+                
+                # Save to CSV with error handling
+                try:
+                    st.write(f"Attempting to save to {file_path}...")
+                    final_df.to_csv(file_path, index=False)
+                    st.write("File saved successfully")
+                    
+                    # Verify the save
+                    verification_df = pd.read_csv(file_path)
+                    st.write("Verification read successful. File contents:")
+                    st.write(verification_df)
+                    
+                    st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+                    st.balloons()
+                except Exception as e:
+                    st.error(f"Error saving file: {str(e)}")
+                    
+            except Exception as e:
+                st.error(f"❌ Error during submission: {str(e)}")
+                st.write(f"Error type: {type(e)}")
+                st.write(f"Error details: {str(e)}")
+                import traceback
+                st.write("Full error:", traceback.format_exc())
