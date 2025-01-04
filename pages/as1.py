@@ -88,7 +88,9 @@ with tabs[0]:
         else:
             st.error("Please enter your code before running.")
 
-    # Replace the submission code section with this:
+
+import os
+import pathlib
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
@@ -98,68 +100,79 @@ with tabs[1]:
             st.error("Please run your code and generate the map before submitting.")
         else:
             try:
-                # Debug message
-                st.write("Starting submission process...")
+                # Get current working directory and construct absolute path
+                current_dir = os.getcwd()
+                st.write(f"Current working directory: {current_dir}")
+                
+                # Create grades directory if it doesn't exist
+                grades_dir = os.path.join(current_dir, 'grades')
+                os.makedirs(grades_dir, exist_ok=True)
+                st.write(f"Grades directory path: {grades_dir}")
+                
+                # Construct absolute file path
+                file_path = os.path.join(grades_dir, 'data_submission.csv')
+                st.write(f"Full file path: {file_path}")
                 
                 # Grade the submission
                 from grades.grade1 import grade_submission
                 score, breakdown = grade_submission(code)
-                st.write(f"Grade calculated: {score}")
-
+                
                 # Create submission data
                 data = {
                     'Full name': [name.strip()],
                     'email': [email.strip()],
                     'student ID': [student_id.strip() if student_id else 'N/A'],
                     'assigment1': [score],
-                    'total': [score]  # Initialize total
+                    'total': [score]
                 }
                 
-                # Debug message
-                st.write("Created submission data...")
-
-                file_path = 'grades/data_submission.csv'
-                
                 try:
-                    # Try to read existing CSV
-                    st.write(f"Attempting to read {file_path}...")
-                    existing_df = pd.read_csv(file_path)
-                    st.write("Existing file read successfully")
+                    # Check if file exists and is readable
+                    if os.path.exists(file_path):
+                        st.write("Reading existing file...")
+                        existing_df = pd.read_csv(file_path)
+                        # Remove existing entry if present
+                        existing_df = existing_df[existing_df['Full name'] != name.strip()]
+                        # Add new submission
+                        new_df = pd.DataFrame(data)
+                        final_df = pd.concat([existing_df, new_df], ignore_index=True)
+                    else:
+                        st.write("Creating new file...")
+                        final_df = pd.DataFrame(data)
                     
-                    # Check if student exists and remove old entry
-                    existing_df = existing_df[existing_df['Full name'] != name.strip()]
+                    # Show data before saving
+                    st.write("Data to be saved:")
+                    st.write(final_df)
                     
-                    # Add new submission
-                    new_submission = pd.DataFrame(data)
-                    final_df = pd.concat([existing_df, new_submission], ignore_index=True)
-                    
-                except FileNotFoundError:
-                    st.write("No existing file found, creating new DataFrame...")
-                    final_df = pd.DataFrame(data)
-
-                # Debug: Show what we're about to save
-                st.write("Data to be saved:")
-                st.write(final_df)
-                
-                # Save to CSV with error handling
-                try:
-                    st.write(f"Attempting to save to {file_path}...")
+                    # Save with absolute path
                     final_df.to_csv(file_path, index=False)
-                    st.write("File saved successfully")
                     
-                    # Verify the save
-                    verification_df = pd.read_csv(file_path)
-                    st.write("Verification read successful. File contents:")
-                    st.write(verification_df)
-                    
-                    st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
-                    st.balloons()
+                    # Verify save
+                    if os.path.exists(file_path):
+                        st.write(f"File size after save: {os.path.getsize(file_path)} bytes")
+                        verification_df = pd.read_csv(file_path)
+                        st.write("File contents after save:")
+                        st.write(verification_df)
+                        
+                        st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+                        st.balloons()
+                    else:
+                        st.error("File was not created successfully")
+                        
                 except Exception as e:
-                    st.error(f"Error saving file: {str(e)}")
+                    st.error(f"Error handling file: {str(e)}")
+                    # Try to write to a different location
+                    alternative_path = os.path.join(current_dir, 'submission_data.csv')
+                    st.write(f"Attempting to write to alternative location: {alternative_path}")
+                    final_df.to_csv(alternative_path, index=False)
                     
             except Exception as e:
                 st.error(f"❌ Error during submission: {str(e)}")
-                st.write(f"Error type: {type(e)}")
-                st.write(f"Error details: {str(e)}")
                 import traceback
                 st.write("Full error:", traceback.format_exc())
+                
+            # List all files in current and grades directory
+            st.write("\nDirectory contents:")
+            st.write("Current directory:", os.listdir(current_dir))
+            if os.path.exists(grades_dir):
+                st.write("Grades directory:", os.listdir(grades_dir))
