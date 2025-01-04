@@ -129,6 +129,12 @@ with tabs[1]:
                     # Create a new DataFrame if the file does not exist
                     df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assigment1', 'total'])
 
+                # Ensure all required columns exist in the DataFrame
+                required_columns = ['Full name', 'email', 'student ID', 'assigment1', 'total']
+                for col in required_columns:
+                    if col not in df.columns:
+                        df[col] = None  # Add missing columns with null values
+
                 # Check if the student already exists in the DataFrame
                 if submission['Full name'] in df['Full name'].values:
                     # Update existing student's data
@@ -140,7 +146,6 @@ with tabs[1]:
                     df = pd.concat([df, new_row], ignore_index=True)
 
                 # Recalculate the 'total' column as the sum of assignment scores
-                # Assuming the CSV has columns like 'assigment1', 'assigment2', etc.
                 assignment_columns = [col for col in df.columns if col.startswith('assigment')]
                 df['total'] = df[assignment_columns].sum(axis=1)
 
