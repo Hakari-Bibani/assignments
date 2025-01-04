@@ -1,4 +1,5 @@
-import streamlit as st import folium
+import streamlit as st
+import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
@@ -39,12 +40,12 @@ with st.expander("Assignment Details", expanded=True):
     st.markdown("""
     ### Objective:
     Write a Python script to plot three geographical coordinates on a map and calculate distances between them.
-
+    
     ### Coordinates:
     - Point 1: (36.325735, 43.928414)
     - Point 2: (36.393432, 44.586781)
     - Point 3: (36.660477, 43.840174)
-
+    
     ### Expected Output:
     1. A map showing all three points with markers
     2. Distance calculations between:
@@ -71,7 +72,7 @@ with tabs[0]:
             st.markdown("### 📤 Output Cell")
             output, error, local_vars = execute_code(code)
             display_output(output, error)
-
+            
             # Store map and distances in session state
             if local_vars:
                 for var in local_vars:
@@ -99,15 +100,15 @@ with tabs[1]:
                         'Assignment 1': 100,  # Placeholder score
                         'Total': 100
                     }
-
+                    
                     try:
                         df = pd.read_csv('grades/data_submission.csv')
                     except FileNotFoundError:
                         df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
-
+                    
                     df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
                     df.to_csv('grades/data_submission.csv', index=False)
-
+                    
                     st.success("Assignment submitted successfully!")
                     st.balloons()
             except Exception as e:
