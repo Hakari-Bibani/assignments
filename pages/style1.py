@@ -1,5 +1,6 @@
 import streamlit as st
-from as1 import calculate_distances, execute_code, COORDINATES
+from streamlit_folium import st_folium
+from as1 import COORDINATES, calculate_distances, execute_code
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -36,6 +37,12 @@ code = st.text_area(
     placeholder="# Enter your code here...",
     help="Write or paste your Python code that implements the required functionality"
 )
+
+# Store map object and distances in session state
+if 'map_obj' not in st.session_state:
+    st.session_state.map_obj = None
+if 'distances' not in st.session_state:
+    st.session_state.distances = None
 
 # Tabbed interface for Run/Submit
 tabs = st.tabs(["Run Cell", "Submit Assignment"])
@@ -113,3 +120,17 @@ with tabs[1]:
                     
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
+
+# Always display the map and distances if they exist in session state
+if st.session_state.map_obj:
+    st_folium(st.session_state.map_obj, width=800, height=500)
+    
+    if st.session_state.distances:
+        st.markdown("### 📏 Distance Report")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
+        with col2:
+            st.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
+        with col3:
+            st.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
