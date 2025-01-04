@@ -4,6 +4,7 @@ from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 import os
+import sys
 from pathlib import Path
 
 # Constants for coordinates
@@ -34,14 +35,17 @@ def get_grades_path():
     grades_dir = current_dir / 'grades'
     return grades_dir / 'data_submission.csv'
 
-# Add the grades directory to system path
+# Setup paths and import grading function
 grades_path = get_grades_path()
 if not grades_path.parent.exists():
     grades_path.parent.mkdir(parents=True)
 
-# Import grading function
 sys.path.append(str(grades_path.parent))
-from grade1 import grade_submission
+try:
+    from grade1 import grade_submission
+except ImportError as e:
+    st.error(f"Failed to import grading module: {e}")
+    grade_submission = None
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -108,6 +112,8 @@ with tabs[1]:
             st.error("Please fill in Name and Email before submitting.")
         elif not code.strip():
             st.error("Please enter your code before submitting.")
+        elif grade_submission is None:
+            st.error("Grading module is not available. Please contact your instructor.")
         else:
             try:
                 # Grade the submission
@@ -160,4 +166,4 @@ if st.session_state.get('map_obj'):
         col1, col2, col3 = st.columns(3)
         col1.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
         col2.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
-        col1.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
+        col3.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
