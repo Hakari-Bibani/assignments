@@ -4,9 +4,6 @@ from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 import os
-import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'grades'))
-from grade1 import grade_submission
 
 # Constants for coordinates
 COORDINATES = [
@@ -14,6 +11,19 @@ COORDINATES = [
     (36.393432, 44.586781),  # Point 2
     (36.660477, 43.840174)   # Point 3
 ]
+
+def grade_submission(code):
+    """Grade the submitted code"""
+    try:
+        # Import necessary grading functions from grade1.py
+        import sys
+        sys.path.append('grades')
+        from grade1 import grade_submission
+        score, breakdown = grade_submission(code)
+        return score, breakdown
+    except Exception as e:
+        st.error(f"Grading error: {str(e)}")
+        return 0, {}
 
 # Function to calculate distances
 def calculate_distances(coords):
@@ -30,20 +40,38 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
-# Function to ensure grades directory exists
-def ensure_grades_dir():
-    os.makedirs('grades', exist_ok=True)
-    if not os.path.exists('grades/data_submission.csv'):
-        pd.DataFrame(columns=[
-            'Full Name', 'Student ID', 'Email', 
-            'Assignment 1', 'Grade', 'Grading_Details', 'Total'
-        ]).to_csv('grades/data_submission.csv', index=False)
-
-# Initialize session state if needed
-if 'map_obj' not in st.session_state:
-    st.session_state.map_obj = None
-if 'distances' not in st.session_state:
-    st.session_state.distances = None
+def save_submission(name, student_id, email, code, score):
+    """Save submission to CSV file"""
+    try:
+        submission = {
+            'Full Name': name,
+            'Student ID': student_id if student_id else 'N/A',
+            'Email': email,
+            'Assignment 1': code,
+            'Grade': score,
+            'Total': score
+        }
+        
+        # Ensure the grades directory exists
+        os.makedirs('grades', exist_ok=True)
+        
+        csv_path = 'grades/data_submission.csv'
+        try:
+            df = pd.read_csv(csv_path)
+        except FileNotFoundError:
+            df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Grade', 'Total'])
+        
+        # Check if student already submitted
+        if len(df) > 0 and name in df['Full Name'].values:
+            df.loc[df['Full Name'] == name] = submission
+        else:
+            df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
+            
+        df.to_csv(csv_path, index=False)
+        return True
+    except Exception as e:
+        st.error(f"Error saving submission: {str(e)}")
+        return False
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -89,32 +117,19 @@ with tabs[0]:
         if code.strip():
             st.markdown("### 📤 Output Cell")
             
-            # Execute code in a safe environment
+            # Execute the code
+            local_namespace = {}
             try:
-                # Create a new namespace for execution
-                local_namespace = {
-                    'folium': folium,
-                    'geodesic': geodesic,
-                    'COORDINATES': COORDINATES
-                }
+                exec(code, {'folium': folium, 'geodesic': geodesic}, local_namespace)
                 
-                # Execute the code
-                exec(code, local_namespace)
-                
-                # Look for map object in namespace
-                map_obj = None
-                for var in local_namespace.values():
-                    if isinstance(var, folium.Map):
-                        map_obj = var
+                # Store map and distances in session state
+                for var in local_namespace:
+                    if isinstance(local_namespace[var], folium.Map):
+                        st.session_state.map_obj = local_namespace[var]
+                        st.session_state.distances = calculate_distances(COORDINATES)
                         break
                 
-                if map_obj:
-                    st.session_state.map_obj = map_obj
-                    st.session_state.distances = calculate_distances(COORDINATES)
-                    st.success("Code executed successfully!")
-                else:
-                    st.warning("No map object found in the output.")
-                    
+                st.success("Code executed successfully!")
             except Exception as e:
                 st.error(f"Error executing code: {str(e)}")
 
@@ -125,51 +140,26 @@ with tabs[1]:
         elif not code.strip():
             st.error("Please enter your code before submitting.")
         else:
-            try:
-                # Ensure grades directory exists
-                ensure_grades_dir()
+            # Grade the submission
+            score, breakdown = grade_submission(code)
+            
+            # Save the submission
+            if save_submission(name, student_id, email, code, score):
+                st.success(f"Assignment submitted successfully! Your grade: {score}/100")
                 
-                # Grade the submission
-                grade, grading_details = grade_submission(code)
-                
-                # Prepare submission data
-                submission = {
-                    'Full Name': name,
-                    'Student ID': student_id if student_id else 'N/A',
-                    'Email': email,
-                    'Assignment 1': code,
-                    'Grade': grade,
-                    'Grading_Details': str(grading_details),
-                    'Total': grade
-                }
-                
-                # Read existing submissions
-                try:
-                    df = pd.read_csv('grades/data_submission.csv')
-                except FileNotFoundError:
-                    df = pd.DataFrame(columns=submission.keys())
-                
-                # Add new submission
-                df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
-                df.to_csv('grades/data_submission.csv', index=False)
-                
-                # Display results
-                st.success(f"Assignment submitted successfully! Your grade: {grade}/100")
-                
-                # Show grading breakdown
+                # Display grading breakdown
                 st.markdown("### Grading Breakdown")
-                for category, details in grading_details.items():
-                    if isinstance(details, dict):
+                for category, points in breakdown.items():
+                    if isinstance(points, dict):
                         st.write(f"**{category}:**")
-                        for subcategory, score in details.items():
-                            st.write(f"- {subcategory}: {score:.2f} points")
+                        for subcategory, subpoints in points.items():
+                            st.write(f"- {subcategory}: {subpoints:.2f} points")
                     else:
-                        st.write(f"**{category}:** {details:.2f} points")
+                        st.write(f"**{category}:** {points:.2f} points")
                 
                 st.balloons()
-                
-            except Exception as e:
-                st.error(f"Error submitting assignment: {str(e)}")
+            else:
+                st.error("Failed to save submission. Please try again.")
 
 # Display the map and distances
 if st.session_state.get('map_obj'):
