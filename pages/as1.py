@@ -5,6 +5,7 @@ import folium
 from geopy.distance import geodesic
 from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
+from github import Github  # PyGithub library
 
 # Constants for coordinates
 COORDINATES = [
@@ -28,13 +29,15 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
-# Define the absolute path to the repository root
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # Adjust based on your repo structure
-GRADES_DIR = os.path.join(REPO_ROOT, 'grades')
+# Define the relative path to the grades directory
+GRADES_DIR = os.path.join('grades')
 FILE_PATH = os.path.join(GRADES_DIR, 'data_submission.csv')
 
 # Ensure the 'grades' directory exists
 os.makedirs(GRADES_DIR, exist_ok=True)
+
+# Debug: Print the current working directory
+st.write(f"Current Working Directory: {os.getcwd()}")
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -169,9 +172,34 @@ with tabs[1]:
                 # Save the updated DataFrame back to the CSV file
                 df.to_csv(FILE_PATH, index=False)
 
-                # Confirm successful submission
-                st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
-                st.balloons()
+                # Push the updated CSV file to GitHub
+                try:
+                    # GitHub credentials
+                    GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]  # Store your GitHub PAT in Streamlit secrets
+                    REPO_NAME = "your-repo-name"  # Replace with your repository name
+                    BRANCH = "main"  # Replace with your branch name
+
+                    # Initialize GitHub API
+                    g = Github(GITHUB_TOKEN)
+                    repo = g.get_user().get_repo(REPO_NAME)
+
+                    # Read the updated CSV file
+                    with open(FILE_PATH, "r") as file:
+                        content = file.read()
+
+                    # Push the file to GitHub
+                    repo.update_file(
+                        path=FILE_PATH,
+                        message=f"Update data_submission.csv for {submission['fullname']}",
+                        content=content,
+                        branch=BRANCH,
+                        sha=repo.get_contents(FILE_PATH).sha if FILE_PATH in [f.path for f in repo.get_contents("")] else None
+                    )
+
+                    st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+                    st.balloons()
+                except Exception as e:
+                    st.error(f"❌ Error pushing to GitHub: {str(e)}")
             except Exception as e:
                 st.error(f"❌ Error during submission: {str(e)}")
                 st.error("Please check the 'grades' directory and file permissions.")
