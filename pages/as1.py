@@ -5,7 +5,8 @@ import pandas as pd
 from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
 import sys
-import os
+sys.path.append('./grades')  # Add the grades directory to Python path
+from grade1 import grade_submission 
 
 # Initialize session state for map and distances
 if 'map_obj' not in st.session_state:
