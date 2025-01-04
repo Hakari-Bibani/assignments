@@ -1,11 +1,9 @@
-import streamlit as st
+ import streamlit as st
 import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
-import sys  # Add this import
-import os   # Add this for handling paths
 
 # Constants for coordinates
 COORDINATES = [
@@ -83,7 +81,6 @@ with tabs[0]:
                         st.session_state.distances = calculate_distances(COORDINATES)
                         break
 
-
 with tabs[1]:
     if st.button("Submit", type="primary"):
         if not name or not email:
@@ -92,53 +89,37 @@ with tabs[1]:
             st.error("Please enter your code before submitting.")
         else:
             try:
-                # Execute and grade the code
                 output, error, local_vars = execute_code(code)
                 if error:
                     st.error(f"Error in code execution: {error}")
                 else:
-                    # Import grading function
-                    sys.path.append('grades')
-                    from grade1 import grade_submission
-                    
-                    # Get grade and breakdown
-                    grade, breakdown = grade_submission(code)
-                    
-                    # Prepare submission data with specified column names
                     submission = {
-                        'fullname': name,
-                        'email': email,
-                        'studentID': student_id if student_id else 'N/A',
-                        'assignment1': grade
+                        'Full Name': name,
+                        'Student ID': student_id if student_id else 'N/A',
+                        'Email': email,
+                        'Assignment 1': 100,  # Placeholder score
+                        'Total': 100
                     }
-                    
+
                     try:
-                        # Try to read existing CSV file
                         df = pd.read_csv('grades/data_submission.csv')
                     except FileNotFoundError:
-                        # Create new DataFrame with specified columns
-                        df = pd.DataFrame(columns=['fullname', 'email', 'studentID', 'assignment1'])
-                    
-                    # Add new submission
+                        df = pd.DataFrame(columns=['Full Name', 'Student ID', 'Email', 'Assignment 1', 'Total'])
+
                     df = pd.concat([df, pd.DataFrame([submission])], ignore_index=True)
-                    
-                    # Save to CSV
                     df.to_csv('grades/data_submission.csv', index=False)
-                    
-                    # Show success message with grade breakdown
-                    st.success(f"Assignment submitted successfully! Grade: {grade}/100")
-                    
-                    # Display grade breakdown
-                    st.markdown("### Grade Breakdown")
-                    for category, score in breakdown.items():
-                        if isinstance(score, dict):
-                            st.write(f"{category}:")
-                            for subcategory, subscore in score.items():
-                                st.write(f"  - {subcategory}: {round(subscore, 2)} points")
-                        else:
-                            st.write(f"{category}: {round(score, 2)} points")
-                    
+
+                    st.success("Assignment submitted successfully!")
                     st.balloons()
-                    
             except Exception as e:
                 st.error(f"Error submitting assignment: {str(e)}")
+
+# Display the map and distances
+if st.session_state.get('map_obj'):
+    st_folium(st.session_state.map_obj, width=800, height=500)
+    if st.session_state.get('distances'):
+        st.markdown("### 📏 Distance Report")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Points 1-2", f"{st.session_state.distances['Distance 1-2']} km")
+        col2.metric("Points 2-3", f"{st.session_state.distances['Distance 2-3']} km")
+        col3.metric("Points 1-3", f"{st.session_state.distances['Distance 1-3']} km")
