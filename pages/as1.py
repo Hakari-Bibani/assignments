@@ -1,11 +1,13 @@
-import os
 import streamlit as st
-import pandas as pd
 import folium
 from geopy.distance import geodesic
+import pandas as pd
 from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
-from github import Github  # PyGithub library
+import os
+from github import Github
+from datetime import datetime
+import base64
 
 # Constants for coordinates
 COORDINATES = [
@@ -13,6 +15,71 @@ COORDINATES = [
     (36.393432, 44.586781),  # Point 2
     (36.660477, 43.840174)   # Point 3
 ]
+
+# Initialize GitHub connection
+@st.cache_resource
+def init_github():
+    try:
+        pat = st.secrets["GITHUB_PAT"]
+        return Github(pat)
+    except Exception as e:
+        st.error(f"Error initializing GitHub connection: {str(e)}")
+        return None
+
+# Function to update CSV in GitHub
+def update_github_csv(submission_data):
+    try:
+        g = init_github()
+        if not g:
+            return False, "GitHub connection failed"
+
+        repo = g.get_repo(st.secrets["GITHUB_REPO"])  # format: "username/repository"
+        file_path = "grades/data_submission.csv"
+        
+        try:
+            # Try to get existing file
+            contents = repo.get_contents(file_path)
+            existing_data = base64.b64decode(contents.content).decode('utf-8')
+            df = pd.read_csv(pd.StringIO(existing_data))
+        except:
+            # Create new DataFrame if file doesn't exist
+            df = pd.DataFrame(columns=['fullname', 'email', 'studentID', 'assignment1', 'total'])
+
+        # Update or append submission data
+        new_data = pd.DataFrame([submission_data])
+        if submission_data['fullname'] in df['fullname'].values:
+            # Update existing record
+            df.loc[df['fullname'] == submission_data['fullname']] = new_data.iloc[0]
+        else:
+            # Append new record
+            df = pd.concat([df, new_data], ignore_index=True)
+
+        # Recalculate total
+        assignment_cols = [col for col in df.columns if col.startswith('assignment')]
+        quiz_cols = [col for col in df.columns if col.startswith('quiz')]
+        df['total'] = df[assignment_cols + quiz_cols].sum(axis=1)
+
+        # Prepare commit
+        csv_buffer = df.to_csv(index=False)
+        commit_message = f"Update submission data - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+        if contents:
+            repo.update_file(
+                file_path,
+                commit_message,
+                csv_buffer,
+                contents.sha
+            )
+        else:
+            repo.create_file(
+                file_path,
+                commit_message,
+                csv_buffer
+            )
+
+        return True, "Submission successfully saved"
+    except Exception as e:
+        return False, f"Error updating GitHub: {str(e)}"
 
 # Function to calculate distances
 def calculate_distances(coords):
@@ -29,16 +96,6 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
-# Define the relative path to the grades directory
-GRADES_DIR = os.path.join('grades')
-FILE_PATH = os.path.join(GRADES_DIR, 'data_submission.csv')
-
-# Ensure the 'grades' directory exists
-os.makedirs(GRADES_DIR, exist_ok=True)
-
-# Debug: Print the current working directory
-st.write(f"Current Working Directory: {os.getcwd()}")
-
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 
@@ -52,12 +109,12 @@ with st.expander("Assignment Details", expanded=True):
     st.markdown("""
     ### Objective:
     Write a Python script to plot three geographical coordinates on a map and calculate distances between them.
-
+    
     ### Coordinates:
     - Point 1: (36.325735, 43.928414)
     - Point 2: (36.393432, 44.586781)
     - Point 3: (36.660477, 43.840174)
-
+    
     ### Expected Output:
     1. A map showing all three points with markers
     2. Distance calculations between:
@@ -94,13 +151,13 @@ with tabs[0]:
                         st.session_state['distances'] = calculate_distances(COORDINATES)
                         map_found = True
                         break
-
+            
             if not map_found:
                 st.warning("No map object found in your code.")
         else:
             st.error("Please enter your code before running.")
 
-    # Display the map and distances if available in st.session_state
+    # Display the map and distances if available
     if 'map_obj' in st.session_state:
         st.markdown("### 🗺️ Generated Map")
         st_folium(st.session_state['map_obj'], width=800, height=500)
@@ -129,77 +186,22 @@ with tabs[1]:
                     'fullname': name.strip(),
                     'email': email.strip(),
                     'studentID': student_id.strip() if student_id else 'N/A',
-                    'assigment1': score
+                    'assignment1': score
                 }
 
-                # Load existing data or create a new DataFrame
-                try:
-                    # Try reading the existing CSV
-                    df = pd.read_csv(FILE_PATH)
-                except FileNotFoundError:
-                    # Create a new DataFrame with all required columns
-                    columns = [
-                        'fullname', 'email', 'studentID', 'assigment1', 'assigment2', 'assigment3', 
-                        'assigment4', 'assigment5', 'assigment6', 'assigment7', 'assigment8', 
-                        'assigment9', 'assigment10', 'assigment11', 'assigment12', 'assigment13', 
-                        'assigment14', 'assigment15', 'quiz1', 'quiz2', 'quiz3', 'quiz4', 'quiz5', 
-                        'quiz6', 'quiz7', 'quiz8', 'quiz9', 'quiz10', 'total'
-                    ]
-                    df = pd.DataFrame(columns=columns)
-
-                # Debug: Print the file path and DataFrame before update
-                st.write(f"File Path: {FILE_PATH}")
-                st.write("DataFrame Before Update:", df)
-
-                # Check if the student already exists in the DataFrame
-                if submission['fullname'] in df['fullname'].values:
-                    # Update existing student's data
-                    df.loc[df['fullname'] == submission['fullname'], ['email', 'studentID', 'assigment1']] = \
-                        [submission['email'], submission['studentID'], submission['assigment1']]
-                else:
-                    # Add new student data
-                    new_row = {col: submission.get(col, None) for col in df.columns}
-                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-
-                # Recalculate the 'total' column as the sum of all assignment and quiz columns
-                assignment_columns = [col for col in df.columns if col.startswith('assigment')]
-                quiz_columns = [col for col in df.columns if col.startswith('quiz')]
-                df['total'] = df[assignment_columns + quiz_columns].sum(axis=1)
-
-                # Debug: Print DataFrame after update
-                st.write("DataFrame After Update:", df)
-
-                # Save the updated DataFrame back to the CSV file
-                df.to_csv(FILE_PATH, index=False)
-
-                # Push the updated CSV file to GitHub
-                try:
-                    # GitHub credentials
-                    GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]  # Store your GitHub PAT in Streamlit secrets
-                    REPO_NAME = "your-repo-name"  # Replace with your repository name
-                    BRANCH = "main"  # Replace with your branch name
-
-                    # Initialize GitHub API
-                    g = Github(GITHUB_TOKEN)
-                    repo = g.get_user().get_repo(REPO_NAME)
-
-                    # Read the updated CSV file
-                    with open(FILE_PATH, "r") as file:
-                        content = file.read()
-
-                    # Push the file to GitHub
-                    repo.update_file(
-                        path=FILE_PATH,
-                        message=f"Update data_submission.csv for {submission['fullname']}",
-                        content=content,
-                        branch=BRANCH,
-                        sha=repo.get_contents(FILE_PATH).sha if FILE_PATH in [f.path for f in repo.get_contents("")] else None
-                    )
-
+                # Update GitHub CSV
+                success, message = update_github_csv(submission)
+                
+                if success:
                     st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
                     st.balloons()
-                except Exception as e:
-                    st.error(f"❌ Error pushing to GitHub: {str(e)}")
+                    
+                    # Display detailed feedback
+                    st.markdown("### Grading Breakdown")
+                    for criterion, points in breakdown.items():
+                        st.write(f"- {criterion}: {points} points")
+                else:
+                    st.error(f"❌ Submission Error: {message}")
+                    
             except Exception as e:
                 st.error(f"❌ Error during submission: {str(e)}")
-                st.error("Please check the 'grades' directory and file permissions.")
