@@ -6,7 +6,7 @@ from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
 import requests
 import base64
-import io  # Import io for StringIO
+import io
 
 # Constants for coordinates
 COORDINATES = [
@@ -40,7 +40,7 @@ def update_csv_in_github(submission):
 
         # Headers for GitHub API
         headers = {
-            "Authorization": f"Bearer {st.secrets['GITHUB_PAT']}",
+            "Authorization": f"Bearer {st.secrets['GITHUB_PAT']}",  # Use Bearer token
             "Accept": "application/vnd.github.v3+json"
         }
 
@@ -49,6 +49,9 @@ def update_csv_in_github(submission):
         if response.status_code == 404:
             # File does not exist, create a new DataFrame
             df = pd.DataFrame(columns=['fullname', 'email', 'studentID', 'assignment1', 'total'])
+        elif response.status_code == 401:
+            st.error("Unauthorized: Check if your GitHub PAT is valid and has the correct permissions.")
+            return False
         else:
             response.raise_for_status()
             file_data = response.json()
