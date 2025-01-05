@@ -21,7 +21,35 @@ COORDINATES = [
 def init_github():
     try:
         pat = st.secrets["GITHUB_PAT"]
-        return Github(pat)
+        repo_name = st.secrets["GITHUB_REPO"]
+        # Debug information
+        st.write("🔍 Debug Information:")
+        st.write(f"Repository name: {repo_name}")
+        st.write(f"PAT starts with: {pat[:7]}...")
+        
+        g = Github(pat)
+        
+        # Test connection
+        try:
+            user = g.get_user()
+            st.write(f"✅ Authenticated as: {user.login}")
+        except Exception as e:
+            st.error(f"Authentication error: {str(e)}")
+            return None
+            
+        # Test repository access
+        try:
+            repo = g.get_repo(repo_name)
+            st.write(f"✅ Found repository: {repo.full_name}")
+            return g
+        except Exception as e:
+            st.error(f"Repository access error: {str(e)}")
+            st.write("Please check:")
+            st.write("1. Repository name is exact (case-sensitive)")
+            st.write("2. Repository exists and is accessible")
+            st.write("3. PAT has correct permissions")
+            return None
+            
     except Exception as e:
         st.error(f"Error initializing GitHub connection: {str(e)}")
         return None
