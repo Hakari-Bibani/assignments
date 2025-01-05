@@ -6,7 +6,6 @@ from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
 import requests
 import base64
-import os
 
 # Constants for coordinates
 COORDINATES = [
@@ -34,23 +33,26 @@ def calculate_distances(coords):
 def update_csv_in_github(submission):
     try:
         # GitHub API URL for the CSV file
-        repo = "your-github-username/your-repo-name"  # Replace with your GitHub repo
+        repo = "Hakari-Bibani/assignments"  # Updated repository name
         path = "grades/data_submission.csv"
         url = f"https://api.github.com/repos/{repo}/contents/{path}"
 
-        # Get the current file content and SHA
+        # Headers for GitHub API
         headers = {
             "Authorization": f"Bearer {st.secrets['GITHUB_PAT']}",
             "Accept": "application/vnd.github.v3+json"
         }
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        file_data = response.json()
-        file_content = base64.b64decode(file_data['content']).decode('utf-8')
-        file_sha = file_data['sha']
 
-        # Load the CSV content into a DataFrame
-        df = pd.read_csv(pd.compat.StringIO(file_content))
+        # Try to get the current file content and SHA
+        response = requests.get(url, headers=headers)
+        if response.status_code == 404:
+            # File does not exist, create a new DataFrame
+            df = pd.DataFrame(columns=['fullname', 'email', 'studentID', 'assignment1', 'total'])
+        else:
+            response.raise_for_status()
+            file_data = response.json()
+            file_content = base64.b64decode(file_data['content']).decode('utf-8')
+            df = pd.read_csv(pd.compat.StringIO(file_content))
 
         # Update or add the submission
         if submission['Full name'] in df['fullname'].values:
@@ -59,7 +61,13 @@ def update_csv_in_github(submission):
                 [submission['email'], submission['student ID'], submission['assignment1']]
         else:
             # Add new student data
-            new_row = pd.DataFrame([submission])
+            new_row = pd.DataFrame([{
+                'fullname': submission['Full name'],
+                'email': submission['email'],
+                'studentID': submission['student ID'],
+                'assignment1': submission['assignment1'],
+                'total': submission['assignment1']  # Initialize total with assignment1 score
+            }])
             df = pd.concat([df, new_row], ignore_index=True)
 
         # Recalculate the 'total' column as the sum of assignment scores
@@ -75,7 +83,7 @@ def update_csv_in_github(submission):
         commit_data = {
             "message": f"Update data_submission.csv for {submission['Full name']}",
             "content": updated_content_base64,
-            "sha": file_sha
+            "sha": response.json()['sha'] if response.status_code != 404 else None
         }
         commit_response = requests.put(url, headers=headers, json=commit_data)
         commit_response.raise_for_status()
