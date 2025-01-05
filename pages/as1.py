@@ -59,7 +59,7 @@ def save_submission_to_csv(submission, file_path, github_repo):
         with open(file_path, 'r') as f:
             content = f.read()
         
-        repo = github_repo.get_repo("YOUR_GITHUB_REPO_NAME")
+        repo = github_repo.get_repo("assignments")
         try:
             file = repo.get_contents(file_path)
             repo.update_file(file.path, "Update submission data", content, file.sha)
