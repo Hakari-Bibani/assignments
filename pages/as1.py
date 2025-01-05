@@ -16,8 +16,14 @@ COORDINATES = [
     (36.660477, 43.840174)   # Point 3
 ]
 
-GITHUB_REPO = st.secrets["github"]["repo"]
-PAT = st.secrets["github"]["pat"]
+# Try to get GitHub secrets, fall back to local file if not available
+try:
+    GITHUB_REPO = st.secrets["github"]["repo"]
+    PAT = st.secrets["github"]["pat"]
+    USE_GITHUB = True
+except KeyError:
+    USE_GITHUB = False
+    st.warning("GitHub secrets not configured. Falling back to local file storage.")
 
 def update_github_csv(submission_data):
     """
@@ -184,8 +190,40 @@ with tabs[1]:
                     'assignment1': score
                 }
 
-                # Update GitHub with new submission
-                success, message = update_github_csv(submission)
+                if USE_GITHUB:
+                    # Update GitHub with new submission
+                    success, message = update_github_csv(submission)
+                else:
+                    # Fallback to local file storage
+                    file_path = 'grades/data_submission.csv'
+                    try:
+                        # Try reading the existing CSV
+                        if os.path.exists(file_path):
+                            df = pd.read_csv(file_path)
+                        else:
+                            df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assignment1', 'total'])
+
+                        # Update or add the submission
+                        if submission['Full name'] in df['Full name'].values:
+                            df.loc[df['Full name'] == submission['Full name'], 
+                                  ['email', 'student ID', 'assignment1']] = [
+                                      submission['email'],
+                                      submission['student ID'],
+                                      submission['assignment1']
+                                  ]
+                        else:
+                            new_row = pd.DataFrame([submission])
+                            df = pd.concat([df, new_row], ignore_index=True)
+
+                        # Recalculate the total column
+                        assignment_cols = [col for col in df.columns if col.startswith(('assignment', 'quiz'))]
+                        df['total'] = df[assignment_cols].sum(axis=1)
+
+                        # Save the updated DataFrame
+                        df.to_csv(file_path, index=False)
+                        success, message = True, "Submission saved to local file"
+                    except Exception as e:
+                        success, message = False, f"Error saving to local file: {str(e)}"
                 
                 if success:
                     st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
