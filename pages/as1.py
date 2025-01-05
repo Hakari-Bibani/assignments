@@ -4,10 +4,11 @@ from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
-import os
-from github import Github
-from datetime import datetime
 import base64
+from github import Github
+import os
+from datetime import datetime
+import io
 
 # Constants for coordinates
 COORDINATES = [
@@ -21,35 +22,7 @@ COORDINATES = [
 def init_github():
     try:
         pat = st.secrets["GITHUB_PAT"]
-        repo_name = st.secrets["GITHUB_REPO"]
-        # Debug information
-        st.write("🔍 Debug Information:")
-        st.write(f"Repository name: {repo_name}")
-        st.write(f"PAT starts with: {pat[:7]}...")
-        
-        g = Github(pat)
-        
-        # Test connection
-        try:
-            user = g.get_user()
-            st.write(f"✅ Authenticated as: {user.login}")
-        except Exception as e:
-            st.error(f"Authentication error: {str(e)}")
-            return None
-            
-        # Test repository access
-        try:
-            repo = g.get_repo(repo_name)
-            st.write(f"✅ Found repository: {repo.full_name}")
-            return g
-        except Exception as e:
-            st.error(f"Repository access error: {str(e)}")
-            st.write("Please check:")
-            st.write("1. Repository name is exact (case-sensitive)")
-            st.write("2. Repository exists and is accessible")
-            st.write("3. PAT has correct permissions")
-            return None
-            
+        return Github(pat)
     except Exception as e:
         st.error(f"Error initializing GitHub connection: {str(e)}")
         return None
@@ -59,60 +32,59 @@ def update_github_csv(submission_data):
     try:
         g = init_github()
         if not g:
-            return False, "GitHub connection failed"
+            return False, "Failed to initialize GitHub connection"
 
-        repo = g.get_repo(st.secrets["GITHUB_REPO"])
+        # Replace with your repository details
+        repo = g.get_repo("YOUR_USERNAME/YOUR_REPO")
         file_path = "grades/data_submission.csv"
-        
+
         try:
-            # Try to get existing file
+            # Try to get the existing file
             contents = repo.get_contents(file_path)
             existing_data = base64.b64decode(contents.content).decode('utf-8')
-            df = pd.read_csv(pd.StringIO(existing_data))
+            df = pd.read_csv(io.StringIO(existing_data))
         except:
             # Create new DataFrame if file doesn't exist
-            df = pd.DataFrame(columns=['fullname', 'email', 'studentID'] + 
-                            [f'assignment{i}' for i in range(1, 16)] +
-                            [f'quiz{i}' for i in range(1, 11)] +
-                            ['total'])
+            df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assignment1', 'total'])
 
-        # Prepare new data with all columns initialized to 0
-        new_row = {col: 0 for col in df.columns}
-        new_row.update(submission_data)
-        
         # Update or append submission data
-        if submission_data['fullname'] in df['fullname'].values:
-            # Update only the assignment1 column for existing student
-            mask = df['fullname'] == submission_data['fullname']
-            df.loc[mask, 'assignment1'] = submission_data['assignment1']
+        new_row = pd.DataFrame([submission_data])
+        if submission_data['Full name'] in df['Full name'].values:
+            df.loc[df['Full name'] == submission_data['Full name'], 
+                  ['email', 'student ID', 'assignment1']] = [
+                      submission_data['email'], 
+                      submission_data['student ID'], 
+                      submission_data['assignment1']
+                  ]
         else:
-            # Append new record
-            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            df = pd.concat([df, new_row], ignore_index=True)
 
         # Recalculate total
-        assignment_cols = [col for col in df.columns if col.startswith('assignment')]
-        quiz_cols = [col for col in df.columns if col.startswith('quiz')]
-        df['total'] = df[assignment_cols + quiz_cols].sum(axis=1)
+        df['total'] = df.filter(like='assignment').sum(axis=1)
 
-        # Prepare commit
-        csv_buffer = df.to_csv(index=False)
+        # Convert DataFrame to CSV string
+        csv_content = df.to_csv(index=False)
+
+        # Create commit message
         commit_message = f"Update submission data - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-        if contents:
+        try:
+            # Update existing file
             repo.update_file(
                 file_path,
                 commit_message,
-                csv_buffer,
-                contents.sha
+                csv_content,
+                contents.sha if 'contents' in locals() else None
             )
-        else:
+        except:
+            # Create new file if doesn't exist
             repo.create_file(
                 file_path,
                 commit_message,
-                csv_buffer
+                csv_content
             )
 
-        return True, "Submission successfully saved"
+        return True, "Successfully updated submission data"
     except Exception as e:
         return False, f"Error updating GitHub: {str(e)}"
 
@@ -137,7 +109,7 @@ st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 # Student Information
 name = st.text_input("Full Name")
 email = st.text_input("Email")
-student_id = st.text_input("Student ID (Optional)")
+student_id = st.text_input("Student ID")
 
 # Assignment Details Accordion
 with st.expander("Assignment Details", expanded=True):
@@ -192,7 +164,7 @@ with tabs[0]:
         else:
             st.error("Please enter your code before running.")
 
-    # Display the map and distances if available
+    # Display the map and distances if available in st.session_state
     if 'map_obj' in st.session_state:
         st.markdown("### 🗺️ Generated Map")
         st_folium(st.session_state['map_obj'], width=800, height=500)
@@ -218,9 +190,9 @@ with tabs[1]:
 
                 # Prepare submission dictionary
                 submission = {
-                    'fullname': name.strip(),
+                    'Full name': name.strip(),
                     'email': email.strip(),
-                    'studentID': student_id.strip() if student_id else 'N/A',
+                    'student ID': student_id.strip() if student_id else 'N/A',
                     'assignment1': score
                 }
 
@@ -231,7 +203,7 @@ with tabs[1]:
                     st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
                     st.balloons()
                 else:
-                    st.error(f"❌ Submission Error: {message}")
+                    st.error(f"❌ Submission error: {message}")
                     
             except Exception as e:
                 st.error(f"❌ Error during submission: {str(e)}")
