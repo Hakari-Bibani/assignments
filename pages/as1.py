@@ -6,7 +6,6 @@ from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
 import base64
 from github import Github
-import os
 from datetime import datetime
 import io
 
@@ -17,76 +16,45 @@ COORDINATES = [
     (36.660477, 43.840174)   # Point 3
 ]
 
-# Initialize GitHub connection
-@st.cache_resource
+# GitHub Configuration
 def init_github():
     try:
-        pat = st.secrets["GITHUB_PAT"]
-        return Github(pat)
+        return Github(st.secrets["github"]["pat"])
     except Exception as e:
-        st.error(f"Error initializing GitHub connection: {str(e)}")
+        st.error(f"Error initializing GitHub: {str(e)}")
         return None
 
-# Function to update CSV in GitHub
-def update_github_csv(submission_data):
+def update_github_csv(data_df):
     try:
         g = init_github()
         if not g:
-            return False, "Failed to initialize GitHub connection"
-
-        # Replace with your repository details
-        repo = g.get_repo("YOUR_USERNAME/YOUR_REPO")
-        file_path = "grades/data_submission.csv"
-
+            return False
+        
+        repo = g.get_repo(st.secrets["github"]["repository"])
+        file_path = 'grades/data_submission.csv'
+        
         try:
             # Try to get the existing file
             contents = repo.get_contents(file_path)
-            existing_data = base64.b64decode(contents.content).decode('utf-8')
-            df = pd.read_csv(io.StringIO(existing_data))
-        except:
-            # Create new DataFrame if file doesn't exist
-            df = pd.DataFrame(columns=['Full name', 'email', 'student ID', 'assignment1', 'total'])
-
-        # Update or append submission data
-        new_row = pd.DataFrame([submission_data])
-        if submission_data['Full name'] in df['Full name'].values:
-            df.loc[df['Full name'] == submission_data['Full name'], 
-                  ['email', 'student ID', 'assignment1']] = [
-                      submission_data['email'], 
-                      submission_data['student ID'], 
-                      submission_data['assignment1']
-                  ]
-        else:
-            df = pd.concat([df, new_row], ignore_index=True)
-
-        # Recalculate total
-        df['total'] = df.filter(like='assignment').sum(axis=1)
-
-        # Convert DataFrame to CSV string
-        csv_content = df.to_csv(index=False)
-
-        # Create commit message
-        commit_message = f"Update submission data - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
-        try:
-            # Update existing file
+            # Convert DataFrame to CSV string
+            csv_buffer = io.StringIO()
+            data_df.to_csv(csv_buffer, index=False)
+            csv_content = csv_buffer.getvalue()
+            
+            # Update file in GitHub
             repo.update_file(
                 file_path,
-                commit_message,
+                f"Update submission data - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                 csv_content,
-                contents.sha if 'contents' in locals() else None
+                contents.sha
             )
-        except:
-            # Create new file if doesn't exist
-            repo.create_file(
-                file_path,
-                commit_message,
-                csv_content
-            )
-
-        return True, "Successfully updated submission data"
+            return True
+        except Exception as e:
+            st.error(f"Error updating GitHub file: {str(e)}")
+            return False
     except Exception as e:
-        return False, f"Error updating GitHub: {str(e)}"
+        st.error(f"GitHub operation failed: {str(e)}")
+        return False
 
 # Function to calculate distances
 def calculate_distances(coords):
@@ -178,8 +146,8 @@ with tabs[0]:
 
 with tabs[1]:
     if st.button("Submit", type="primary"):
-        if not name or not email:
-            st.error("Please fill in both your Name and Email before submitting.")
+        if not name or not email or not student_id:
+            st.error("Please fill in your Name, Email, and Student ID before submitting.")
         elif 'map_obj' not in st.session_state or 'distances' not in st.session_state:
             st.error("Please run your code and generate the map before submitting.")
         else:
@@ -190,20 +158,63 @@ with tabs[1]:
 
                 # Prepare submission dictionary
                 submission = {
-                    'Full name': name.strip(),
+                    'fullname': name.strip(),
                     'email': email.strip(),
-                    'student ID': student_id.strip() if student_id else 'N/A',
+                    'studentID': student_id.strip(),
                     'assignment1': score
                 }
 
-                # Update GitHub CSV
-                success, message = update_github_csv(submission)
-                
-                if success:
-                    st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
-                    st.balloons()
-                else:
-                    st.error(f"❌ Submission error: {message}")
-                    
+                try:
+                    # Initialize GitHub connection
+                    g = init_github()
+                    if not g:
+                        st.error("Failed to initialize GitHub connection")
+                        return
+
+                    repo = g.get_repo(st.secrets["github"]["repository"])
+                    file_path = 'grades/data_submission.csv'
+
+                    try:
+                        # Get existing content
+                        contents = repo.get_contents(file_path)
+                        existing_data = pd.read_csv(io.StringIO(contents.decoded_content.decode()))
+                    except:
+                        # Create new DataFrame if file doesn't exist
+                        existing_data = pd.DataFrame(columns=['fullname', 'email', 'studentID'] + 
+                                                          [f'assignment{i}' for i in range(1, 16)] +
+                                                          [f'quiz{i}' for i in range(1, 11)] +
+                                                          ['total'])
+
+                    # Update or add the submission
+                    if submission['fullname'] in existing_data['fullname'].values:
+                        # Update existing student's data
+                        idx = existing_data.index[existing_data['fullname'] == submission['fullname']][0]
+                        existing_data.loc[idx, 'email'] = submission['email']
+                        existing_data.loc[idx, 'studentID'] = submission['studentID']
+                        existing_data.loc[idx, 'assignment1'] = submission['assignment1']
+                    else:
+                        # Add new student data
+                        new_row = pd.Series(index=existing_data.columns)
+                        new_row['fullname'] = submission['fullname']
+                        new_row['email'] = submission['email']
+                        new_row['studentID'] = submission['studentID']
+                        new_row['assignment1'] = submission['assignment1']
+                        existing_data = pd.concat([existing_data, pd.DataFrame([new_row])], ignore_index=True)
+
+                    # Calculate total
+                    assignment_cols = [col for col in existing_data.columns if col.startswith('assignment')]
+                    quiz_cols = [col for col in existing_data.columns if col.startswith('quiz')]
+                    existing_data['total'] = existing_data[assignment_cols + quiz_cols].sum(axis=1, skipna=True)
+
+                    # Update the file in GitHub
+                    if update_github_csv(existing_data):
+                        st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+                        st.balloons()
+                    else:
+                        st.error("Failed to update submission data in GitHub")
+
+                except Exception as e:
+                    st.error(f"Error during submission process: {str(e)}")
+
             except Exception as e:
-                st.error(f"❌ Error during submission: {str(e)}")
+                st.error(f"❌ Error during grading: {str(e)}")
