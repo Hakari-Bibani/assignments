@@ -6,6 +6,7 @@ from streamlit_folium import st_folium
 from utils.style1 import execute_code, display_output
 import requests
 import base64
+import io  # Import io for StringIO
 
 # Constants for coordinates
 COORDINATES = [
@@ -52,7 +53,7 @@ def update_csv_in_github(submission):
             response.raise_for_status()
             file_data = response.json()
             file_content = base64.b64decode(file_data['content']).decode('utf-8')
-            df = pd.read_csv(pd.compat.StringIO(file_content))
+            df = pd.read_csv(io.StringIO(file_content))  # Use io.StringIO instead of pandas.compat.StringIO
 
         # Update or add the submission
         if submission['Full name'] in df['fullname'].values:
