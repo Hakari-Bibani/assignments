@@ -49,7 +49,7 @@ def save_to_github(file_path, local_path):
             else:
                 raise e
         
-        st.success("✅ Submission data saved successfully to GitHub.")
+        st.success("✅ Submission data saved successfully.")
     except Exception as e:
         st.error(f"❌ Error saving submission: {e}")
 
