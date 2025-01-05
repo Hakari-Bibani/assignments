@@ -2,8 +2,10 @@ import streamlit as st
 import folium
 from geopy.distance import geodesic
 import pandas as pd
-from github import Github
 from streamlit_folium import st_folium
+from github import Github
+import time
+
 from utils.style1 import execute_code, display_output
 
 # Constants for coordinates
@@ -28,26 +30,47 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
-# GitHub submission function
-def save_to_github(file_path, local_path):
+# Function to check GitHub API rate limits
+def check_rate_limit(github_client):
+    try:
+        rate_limit = github_client.get_rate_limit()
+        core_limit = rate_limit.core  # Access the 'core' attribute
+        remaining = core_limit.remaining
+        reset_time = core_limit.reset
+        st.write(f"Remaining API requests: {remaining}")
+        st.write(f"Rate limit resets at: {reset_time}")
+        return remaining, reset_time
+    except Exception as e:
+        st.error(f"❌ Error checking rate limit: {e}")
+        return None, None
+
+# Function to wait for rate limit reset
+def wait_for_rate_limit_reset(reset_time):
+    current_time = time.time()
+    wait_seconds = reset_time.timestamp() - current_time
+    if wait_seconds > 0:
+        st.write(f"Waiting for rate limit reset: {wait_seconds:.2f} seconds")
+        time.sleep(wait_seconds)
+
+# Function to save submission to GitHub
+def save_to_github_with_rate_limit(file_path, local_path):
     try:
         PAT = st.secrets["GITHUB_PAT"]
         if not PAT:
             raise ValueError("PAT is missing in secrets.toml.")
 
-        # Reinitialize GitHub client for every request
         github = Github(PAT)
-        repo = github.get_repo("Hakari-Bibani/assignments")
-        
-        # Debugging rate limits
-        rate_limit = github.get_rate_limit()
-        st.write(f"Remaining requests: {rate_limit.rate.remaining}")
 
-        # Read the local CSV content
+        # Check rate limits
+        remaining, reset_time = check_rate_limit(github)
+        if remaining == 0:
+            wait_for_rate_limit_reset(reset_time)
+
+        repo = github.get_repo("Hakari-Bibani/assignments")
         with open(local_path, "r") as f:
             content = f.read()
 
-        # Check if the file exists
+        # Update or create file in GitHub repository
         try:
             file = repo.get_contents(file_path)
             repo.update_file(file.path, "Update submission data", content, file.sha)
@@ -56,13 +79,10 @@ def save_to_github(file_path, local_path):
                 repo.create_file(file_path, "Create submission data", content)
             else:
                 raise e
-        
+
         st.success("✅ Submission data saved successfully to GitHub.")
     except Exception as e:
         st.error(f"❌ Error saving submission: {e}")
-        if "Bad credentials" in str(e):
-            st.warning("⚠️ Ensure your PAT is valid and not being invalidated.")
-
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -77,12 +97,12 @@ with st.expander("Assignment Details", expanded=True):
     st.markdown("""
     ### Objective:
     Write a Python script to plot three geographical coordinates on a map and calculate distances between them.
-    
+
     ### Coordinates:
     - Point 1: (36.325735, 43.928414)
     - Point 2: (36.393432, 44.586781)
     - Point 3: (36.660477, 43.840174)
-    
+
     ### Expected Output:
     1. A map showing all three points with markers
     2. Distance calculations between:
@@ -119,7 +139,7 @@ with tabs[0]:
                         st.session_state['distances'] = calculate_distances(COORDINATES)
                         map_found = True
                         break
-            
+
             if not map_found:
                 st.warning("No map object found in your code.")
         else:
@@ -145,44 +165,17 @@ with tabs[1]:
             st.error("Please run your code and generate the map before submitting.")
         else:
             try:
-                # Grade the submission
-                from grades.grade1 import grade_submission
-                score, breakdown = grade_submission(code)
-
-                # Prepare submission dictionary
-                submission = {
-                    'fullname': name.strip(),
-                    'email': email.strip(),
-                    'studentID': student_id.strip() if student_id else 'N/A',
-                    'assignment1': score
+                # Save submission data
+                submission_data = {
+                    "fullname": name.strip(),
+                    "email": email.strip(),
+                    "studentID": student_id.strip() if student_id else "N/A",
+                    "assignment1": st.session_state['distances']
                 }
+                file_path = "grades/data_submission.csv"
 
-                # Load existing data or create a new DataFrame
-                local_csv = "grades/data_submission.csv"
-                try:
-                    df = pd.read_csv(local_csv)
-                except FileNotFoundError:
-                    df = pd.DataFrame(columns=['fullname', 'email', 'studentID', 'assignment1', 'total'])
-
-                # Update or add the submission
-                if submission['fullname'] in df['fullname'].values:
-                    df.loc[df['fullname'] == submission['fullname'], ['email', 'studentID', 'assignment1']] = \
-                        [submission['email'], submission['studentID'], submission['assignment1']]
-                else:
-                    new_row = pd.DataFrame([submission])
-                    df = pd.concat([df, new_row], ignore_index=True)
-
-                # Recalculate the 'total' column as the sum of assignment scores
-                df['total'] = df.filter(like='assignment').sum(axis=1)
-
-                # Save the updated DataFrame locally
-                df.to_csv(local_csv, index=False)
-
-                # Push the updated CSV to GitHub
-                save_to_github("grades/data_submission.csv", local_csv)
-
-                # Confirm successful submission
-                st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
-                st.balloons()
+                # Save locally and upload to GitHub
+                local_path = file_path
+                save_to_github_with_rate_limit(file_path, local_path)
             except Exception as e:
                 st.error(f"❌ Error during submission: {str(e)}")
