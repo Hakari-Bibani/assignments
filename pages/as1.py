@@ -32,9 +32,17 @@ def calculate_distances(coords):
 def save_to_github(file_path, local_path):
     try:
         PAT = st.secrets["GITHUB_PAT"]
+        if not PAT:
+            raise ValueError("PAT is missing in secrets.toml.")
+
+        # Reinitialize GitHub client for every request
         github = Github(PAT)
         repo = github.get_repo("Hakari-Bibani/assignments")
         
+        # Debugging rate limits
+        rate_limit = github.get_rate_limit()
+        st.write(f"Remaining requests: {rate_limit.rate.remaining}")
+
         # Read the local CSV content
         with open(local_path, "r") as f:
             content = f.read()
@@ -52,6 +60,9 @@ def save_to_github(file_path, local_path):
         st.success("✅ Submission data saved successfully to GitHub.")
     except Exception as e:
         st.error(f"❌ Error saving submission: {e}")
+        if "Bad credentials" in str(e):
+            st.warning("⚠️ Ensure your PAT is valid and not being invalidated.")
+
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
