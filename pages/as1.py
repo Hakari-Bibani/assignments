@@ -33,7 +33,7 @@ def update_github_csv(submission_data):
         if not g:
             return False, "GitHub connection failed"
 
-        repo = g.get_repo(st.secrets["GITHUB_REPO"])  # format: "username/repository"
+        repo = g.get_repo(st.secrets["GITHUB_REPO"])
         file_path = "grades/data_submission.csv"
         
         try:
@@ -43,16 +43,23 @@ def update_github_csv(submission_data):
             df = pd.read_csv(pd.StringIO(existing_data))
         except:
             # Create new DataFrame if file doesn't exist
-            df = pd.DataFrame(columns=['fullname', 'email', 'studentID', 'assignment1', 'total'])
+            df = pd.DataFrame(columns=['fullname', 'email', 'studentID'] + 
+                            [f'assignment{i}' for i in range(1, 16)] +
+                            [f'quiz{i}' for i in range(1, 11)] +
+                            ['total'])
 
+        # Prepare new data with all columns initialized to 0
+        new_row = {col: 0 for col in df.columns}
+        new_row.update(submission_data)
+        
         # Update or append submission data
-        new_data = pd.DataFrame([submission_data])
         if submission_data['fullname'] in df['fullname'].values:
-            # Update existing record
-            df.loc[df['fullname'] == submission_data['fullname']] = new_data.iloc[0]
+            # Update only the assignment1 column for existing student
+            mask = df['fullname'] == submission_data['fullname']
+            df.loc[mask, 'assignment1'] = submission_data['assignment1']
         else:
             # Append new record
-            df = pd.concat([df, new_data], ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
         # Recalculate total
         assignment_cols = [col for col in df.columns if col.startswith('assignment')]
@@ -195,11 +202,6 @@ with tabs[1]:
                 if success:
                     st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
                     st.balloons()
-                    
-                    # Display detailed feedback
-                    st.markdown("### Grading Breakdown")
-                    for criterion, points in breakdown.items():
-                        st.write(f"- {criterion}: {points} points")
                 else:
                     st.error(f"❌ Submission Error: {message}")
                     
