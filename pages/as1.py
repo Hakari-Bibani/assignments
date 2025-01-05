@@ -3,10 +3,10 @@ import folium
 from geopy.distance import geodesic
 import pandas as pd
 from streamlit_folium import st_folium
-from github import Github
-import time
-
 from utils.style1 import execute_code, display_output
+import requests
+import base64
+import os
 
 # Constants for coordinates
 COORDINATES = [
@@ -30,59 +30,60 @@ def calculate_distances(coords):
         st.error(f"Error calculating distances: {str(e)}")
         return None
 
-# Function to check GitHub API rate limits
-def check_rate_limit(github_client):
+# Function to update CSV file in GitHub repository
+def update_csv_in_github(submission):
     try:
-        rate_limit = github_client.get_rate_limit()
-        core_limit = rate_limit.core  # Access the 'core' attribute
-        remaining = core_limit.remaining
-        reset_time = core_limit.reset
-        st.write(f"Remaining API requests: {remaining}")
-        st.write(f"Rate limit resets at: {reset_time}")
-        return remaining, reset_time
+        # GitHub API URL for the CSV file
+        repo = "your-github-username/your-repo-name"  # Replace with your GitHub repo
+        path = "grades/data_submission.csv"
+        url = f"https://api.github.com/repos/{repo}/contents/{path}"
+
+        # Get the current file content and SHA
+        headers = {
+            "Authorization": f"Bearer {st.secrets['GITHUB_PAT']}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        file_data = response.json()
+        file_content = base64.b64decode(file_data['content']).decode('utf-8')
+        file_sha = file_data['sha']
+
+        # Load the CSV content into a DataFrame
+        df = pd.read_csv(pd.compat.StringIO(file_content))
+
+        # Update or add the submission
+        if submission['Full name'] in df['fullname'].values:
+            # Update existing student's data
+            df.loc[df['fullname'] == submission['Full name'], ['email', 'studentID', 'assignment1']] = \
+                [submission['email'], submission['student ID'], submission['assignment1']]
+        else:
+            # Add new student data
+            new_row = pd.DataFrame([submission])
+            df = pd.concat([df, new_row], ignore_index=True)
+
+        # Recalculate the 'total' column as the sum of assignment scores
+        df['total'] = df.filter(like='assignment').sum(axis=1)
+
+        # Convert the updated DataFrame back to CSV
+        updated_csv_content = df.to_csv(index=False)
+
+        # Encode the updated content to base64
+        updated_content_base64 = base64.b64encode(updated_csv_content.encode('utf-8')).decode('utf-8')
+
+        # Commit the updated file to GitHub
+        commit_data = {
+            "message": f"Update data_submission.csv for {submission['Full name']}",
+            "content": updated_content_base64,
+            "sha": file_sha
+        }
+        commit_response = requests.put(url, headers=headers, json=commit_data)
+        commit_response.raise_for_status()
+
+        return True
     except Exception as e:
-        st.error(f"❌ Error checking rate limit: {e}")
-        return None, None
-
-# Function to wait for rate limit reset
-def wait_for_rate_limit_reset(reset_time):
-    current_time = time.time()
-    wait_seconds = reset_time.timestamp() - current_time
-    if wait_seconds > 0:
-        st.write(f"Waiting for rate limit reset: {wait_seconds:.2f} seconds")
-        time.sleep(wait_seconds)
-
-# Function to save submission to GitHub
-def save_to_github_with_rate_limit(file_path, local_path):
-    try:
-        PAT = st.secrets["GITHUB_PAT"]
-        if not PAT:
-            raise ValueError("PAT is missing in secrets.toml.")
-
-        github = Github(PAT)
-
-        # Check rate limits
-        remaining, reset_time = check_rate_limit(github)
-        if remaining == 0:
-            wait_for_rate_limit_reset(reset_time)
-
-        repo = github.get_repo("Hakari-Bibani/assignments")
-        with open(local_path, "r") as f:
-            content = f.read()
-
-        # Update or create file in GitHub repository
-        try:
-            file = repo.get_contents(file_path)
-            repo.update_file(file.path, "Update submission data", content, file.sha)
-        except Exception as e:
-            if "Not Found" in str(e):
-                repo.create_file(file_path, "Create submission data", content)
-            else:
-                raise e
-
-        st.success("✅ Submission data saved successfully to GitHub.")
-    except Exception as e:
-        st.error(f"❌ Error saving submission: {e}")
+        st.error(f"Error updating CSV in GitHub: {str(e)}")
+        return False
 
 # Streamlit UI
 st.title("Week 1 - Mapping Coordinates and Calculating Distances")
@@ -90,7 +91,7 @@ st.title("Week 1 - Mapping Coordinates and Calculating Distances")
 # Student Information
 name = st.text_input("Full Name")
 email = st.text_input("Email")
-student_id = st.text_input("Student ID")
+student_id = st.text_input("Student ID (Optional)")
 
 # Assignment Details Accordion
 with st.expander("Assignment Details", expanded=True):
@@ -165,17 +166,23 @@ with tabs[1]:
             st.error("Please run your code and generate the map before submitting.")
         else:
             try:
-                # Save submission data
-                submission_data = {
-                    "fullname": name.strip(),
-                    "email": email.strip(),
-                    "studentID": student_id.strip() if student_id else "N/A",
-                    "assignment1": st.session_state['distances']
-                }
-                file_path = "grades/data_submission.csv"
+                # Grade the submission
+                from grades.grade1 import grade_submission
+                score, breakdown = grade_submission(code)
 
-                # Save locally and upload to GitHub
-                local_path = file_path
-                save_to_github_with_rate_limit(file_path, local_path)
+                # Prepare submission dictionary
+                submission = {
+                    'Full name': name.strip(),
+                    'email': email.strip(),
+                    'student ID': student_id.strip() if student_id else 'N/A',
+                    'assignment1': score
+                }
+
+                # Update the CSV file in GitHub
+                if update_csv_in_github(submission):
+                    st.success(f"✅ Assignment submitted successfully! Your grade is: {score}/100")
+                    st.balloons()
+                else:
+                    st.error("❌ Failed to update submission data in GitHub.")
             except Exception as e:
                 st.error(f"❌ Error during submission: {str(e)}")
